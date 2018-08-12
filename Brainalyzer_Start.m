@@ -13,7 +13,8 @@ close all;
 % directory, etc.                                          %
 %--------------------Editable Constants--------------------%
 %----------------------------------------------------------%
-inDir = 'F:\Data\Doxy\648\';
+inDirTev = 'F:\Data\Doxy\648\';
+inDirSev = 'F:\Data\Doxy\648\';
 outDir = 'D:\Brainalyzer\Results\';
 ratNum = 648;
 
@@ -42,7 +43,7 @@ analysis = 1;
 %----------------------------------------------------------%
 
 if analysis == 1
-    blocks = Brain_FetchBlocksToProcess(inDir, ratNum);
+    blocks = Brain_FetchBlocksToProcess(inDirTev, ratNum);
 elseif analysis > 1
    blocks = Brain_FetchBlocksToAnalyze(outDir, ratNum, analysis);
    for i = 1:size(blocks, 2)
