@@ -44,6 +44,9 @@ analysis = 1;
 
 if analysis == 1
     blocks = Brain_FetchBlocksToProcess(inDirTev, ratNum);
+    for i = 1:size(blocks, 2)
+        Brain_PreProcess(inDirTev, inDirSev, blocks(i));
+    end
 elseif analysis > 1
    blocks = Brain_FetchBlocksToAnalyze(outDir, ratNum, analysis);
    for i = 1:size(blocks, 2)
