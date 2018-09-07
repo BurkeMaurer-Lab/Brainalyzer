@@ -61,7 +61,7 @@ for i = 1:size(ratsToProcess, 2)
         Brain_FetchInfoToProcess(inDirT, inDirS, outDir, ratInfo, blocks);
         
         for j = 1:size(blocks, 2)
-            Brain_PreProcess(inDirTev, inDirSev, toDir, ratInfo, blocks(i));
+            Brain_PreProcess(inDirTev, inDirSev, toDir, ratsToProcess(i).ID, blocks(j));
         end
     
         elseif analysis > 1

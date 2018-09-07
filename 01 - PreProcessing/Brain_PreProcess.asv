@@ -1,9 +1,9 @@
-function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
+function Brain_PreProcess(inDirTev, inDirSev, outDir, ratInfo, blockID)
 
     clc;
     
     fill = 1; %Constant for if you want to try to fill in missing data points
-    blockID = char(blockID);
+    
     %Necessary Constants
     % -cmPERpix
     %    *Centimeter's per pixel count. Necessary for velocity and
@@ -12,7 +12,7 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
     
     % -inputDir4TDT
     %    *Directory where raw TDT files are stored (.tev)
-    inputDirT = [inDirTev, ratNum, '\', blockID, '\'];
+    inputDirT = [inDirTev, blockID, '\'];
     
     % -inputDir4RSV
     %    *Directory where raw RS4 files are stored (.sev)
@@ -46,14 +46,14 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
     for i = 1:size(wavesBlock.wave, 2)
         
         if strcmp(wavesBlock.wave(i).Processed, 'Yes')
-            if strcmp(wavesBlock.wave(i).Type, 'tev')
+            if strcmp(waveBlock.wave(i).Type, 'tev')
                 inDir = inputDirT;
             elseif strcmp(wavesBlock.wave(i).Type, 'sev')
                 inDir = inputDirS;
             end
             
-            eeg.(wavesBlock.wave(i).Name) = Brain_LoadWaveform(inDir, wavesBlock.wave(i), wavesBlock.wave(i).Type);
-            eeg.ts = [0 : 1/eeg.(wavesBlock.wave(i).Name).fs : (1/eeg.(wavesBlock.wave(i).Name).fs)*size(eeg.(wavesBlock.wave(i).Name).data, 2)];
+            eeg.(waveBlock.wave(i).Name) = Brain_LoadWaveform(inDir, wavesBlock.wave(i), dataType);
+            eeg.ts = [0 : 1/eeg.(waveBlock.wave(i).Name).fs :
             %Cut out timeframes between epochs using timeVector
             %Need:
             %   Probe settings to generate prb files and organize channels by
@@ -99,15 +99,8 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
                 yposG = inpaintn(yposG);
             end
             
-            posX = xposR;
-            posY = yposR;
-            
             temp_ts = mean([posTS(2:end); posTS(1:end-1)], 1);
-            interp = interp1([eeg.ts(1) temp_ts eeg.ts(end)], [eeg.ts(1) temp_ts eeg.ts(end)], eeg.ts, 'spline');
-        
-            eeg.pos(1, :) = interp1(posTS, posX, interp, 'spline');
-            eeg.pos(2, :) = interp1(posTS, posY, interp, 'spline');
-            
+            interp = interp1([
         end
     end
     
@@ -131,23 +124,22 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
         
 end
 
-function eegTemp = Brain_LoadWaveform(inDir, wave, dataType)
+function eegTemp = Brain_LoadWaveform(inDir, waveInfo, dataType)
 
-    eegTemp.data = [];
+    eegTemp = [];
     
-    %wave = waveInfo.wave;
-    %clear waveInfo;
+    wave = waveInfo.wave;
+    clear waveInfo;
     
     dataType = validatestring(dataType, {'tev', 'sev'});
     
-    for i = wave.TotChs(1, 1):wave.TotChs(1, 2)
+    for i = wave.Channels(1, 1):wave.Channels(1, 2)
         cprintf('text', ['Loading Channel ', sprintf('%02d', i), '\n']);
         
         if strcmp(dataType, 'tev')
-            dataTemp = TDT2mat(inDir, 'CHANNEL', i, 'TYPE', {'streams'}, 'STORE', {wave.waveID}, ...
-                'VERBOSE', 0);
-        %'T1', 0, 'T2', 0, 'VERBOSE', 0);
-            fs = floor(dataTemp.streams.(wave.waveID).fs);
+            dataTemp = TDT2mat(inDir, 'CHANNEL', i, 'TYPE', {'streams'}, 'STORE', {wave.ID}, ...
+                'T1', 0, 'T2', 0, 'VERBOSE', 0);
+            fs = floor(dataTemp.streams.(wave.ID).fs);
             if wave.RecoFreq == (floor(fs/1000))
                 gap = fs / wave.SaveFreq;
             else
@@ -155,13 +147,13 @@ function eegTemp = Brain_LoadWaveform(inDir, wave, dataType)
                 cprintf('err', 'Frequency in template and recorded frequency in raw files do not match\n');
             end
             
-            eegTemp.data(i, :) = dataTemp(1, 1:gap:end);
+            eegTemp(i, :) = dataTemp(1, 1:gap:end);
             
             clear dataTemp;
             
         elseif strcmp(dataType, 'sev')
             dataTemp = SEV2mat(inDir, 'CHANNEL', i, 'VERBOSE', 0);
-            fs = floor(dataTemp.(wave.waveID).fs);
+            fs = floor(dataTemp.(wave.ID).fs);
             if wave.RecoFreq == (floor(fs/1000))
                 gap = fs / wave.SaveFreq;
             else
@@ -169,7 +161,7 @@ function eegTemp = Brain_LoadWaveform(inDir, wave, dataType)
                 cprintf('err', 'Frequency in template and recorded frequency in raw files do not match\n');
             end
             
-            eegTemp.data(i, :) = [eegTemp.data(i, :), dataTemp];
+            eegTemp(i, :) = [eegTemp(i, :), dataTemp];
                 
             clear dataTemp;
         end

@@ -117,7 +117,8 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, blocks)
                     fprintf(notes, ['\t', sprintf('%02d', k), ') ', streamIDs(k, :), '\n']);
                                         
                     if strcmp(validatedAnsr, 'no')
-                        fprintf(notes, '\t\tName: - \n');                        
+                        fprintf(notes, '\t\tName: - \n');
+                        fprintf(notes, '\t\tType: - \n');
                         fprintf(notes, '\t\tPre_Processed: No\n');
                         fprintf(notes, '\t\tSpike_Sorted: No\n\n');
                         
@@ -127,6 +128,7 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, blocks)
                         fprintf(notes, '\t\tBad_Channels: - \n\n');
                     else
                         fprintf(notes, ['\t\tName: ', ratInfo.wave(xx).Name, '\n']);
+                        fprintf(notes, ['\t\tType: ', ratInfo.wave(xx).Type, '\n']);
                         fprintf(notes, '\t\tPre_Processed: Yes\n');
                         
                         ansr = input('Would you like to sort this waveform for spikes?\n', 's');
@@ -150,7 +152,7 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, blocks)
                             
                         fprintf(notes, ['\t\tSaved_Frequency: ~', num2str(user_downFreq), ' KHz\n']);
                         
-                        fprintf(notes, ['\t\tChannels: ', num2str(size(holderData.streams.(streamIDs(k, :)).data, 1)), '\n']);
+                        fprintf(notes, ['\t\tChannels: 1-', num2str(size(holderData.streams.(streamIDs(k, :)).data, 1)), '\n']);
                         
                         ansr = input('Enter bad channels for this waveform\n', 's');
                         user_badCh = '';
