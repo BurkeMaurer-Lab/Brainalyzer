@@ -13,10 +13,9 @@ close all;
 % directory, etc.                                          %
 %--------------------Editable Constants--------------------%
 %----------------------------------------------------------%
-inDirTev = 'F:\Data\Doxy\648\';
+inDirTev = 'E:\Raw Data\';
 inDirSev = 'F:\Data\Doxy\648\';
 outDir = 'D:\Brainalyzer\Results\';
-ratNum = 648;
 
 analysis = 1;
 %Choose analysis value from list below
@@ -26,9 +25,17 @@ analysis = 1;
 %
 % 2 = Noise Reduction
 %    -Noise reduction has not yet been implemented
-% 3 = Spike Sorting
+% 3 = Position Heat Map
 %    -Spike sorting has not yet been implemented
 %----------------------------------------------------------%
+
+if analysis == 1
+    ratsToProcess = Interface_ReturnRatsToProcess(inDirTev);
+    %ratPoss = dir(inDirTev);
+else
+    ratsToProcess = Interface_ReturnRatsToProcess(outDir);
+end
+
 
 
 %----------------------------------------------------------%
@@ -41,19 +48,31 @@ analysis = 1;
 % directory, etc.                                          %
 %--------------------Editable Constants--------------------%
 %----------------------------------------------------------%
-
-if analysis == 1
-    blocks = Brain_FetchBlocksToProcess(inDirTev, ratNum);
-    for i = 1:size(blocks, 2)
-        Brain_PreProcess(inDirTev, inDirSev, blocks(i));
-    end
-elseif analysis > 1
-   blocks = Brain_FetchBlocksToAnalyze(outDir, ratNum, analysis);
-   for i = 1:size(blocks, 2)
-       if analysis == 2
+for i = 1:size(ratsToProcess, 2)
+    if analysis == 1
+        toDir = [outDir, ratsToProcess(i).ID, '\'];
+        
+        inDirT = [inDirTev, ratsToProcess(i).ID, '\'];
+        inDirS = [inDirSev, ratsToProcess(i).ID, '\'];
+        
+        ratInfo = Brain_FetchRatInfo(toDir, ratsToProcess(i).ID);
+        blocks = Brain_FetchBlocksToProcess(inDirT, ratsToProcess(i).ID);
+        
+        Brain_FetchInfoToProcess(inDirT, inDirS, outDir, ratInfo, blocks);
+        
+        for j = 1:size(blocks, 2)
+            Brain_PreProcess(inDirTev, inDirSev, toDir, ratInfo, blocks(i));
+        end
+    
+        elseif analysis > 1
+        blocks = Brain_FetchBlocksToAnalyze(outDir, ratNum, analysis);
+   
+        for j = 1:size(blocks, 2)
+            if analysis == 2
            %Run noise reduction
-       elseif analysis == 3
+            elseif analysis == 3
            %Run module 3
-       end
-   end
+            end
+        end
+    end
 end

@@ -29,7 +29,7 @@ function blocks2process = Brain_FetchBlocksToProcess(inDir, ratNum)
     for i = 1:length(files)
         delim_dash = strsplit(files(i).name, '-');
         delim_under = strsplit(delim_dash{1}, '_');
-        if strcmp(delim_under{1}, num2str(ratNum))
+        if strcmp(delim_under{1}, ratNum)
             ratID = delim_dash{1};
             blocks.names = [blocks.names; files(i).name];
             blocks.times = [blocks.times; [delim_dash{2}, '-', delim_dash{3}]];
@@ -39,13 +39,13 @@ function blocks2process = Brain_FetchBlocksToProcess(inDir, ratNum)
     if size(blocks.names, 1) == 0
         cprintf('err', 'Error:\n');
         cprintf('text', 'No blocks for ');
-        cprintf('comment', ['Rat ', num2str(ratNum)]);
+        cprintf('comment', ['Rat ', ratNum]);
         cprintf('text', ' were found in the directory\n');
         return
     else
         cprintf('key', [num2str(size(blocks.names, 1)), ' Blocks']);
         cprintf('text', ' found for ');
-        cprintf([0, 0.75, 0.75], ['Rat ', num2str(ratNum), '\n']);
+        cprintf([0, 0.75, 0.75], ['Rat ', ratNum, '\n']);
     end
     
     
