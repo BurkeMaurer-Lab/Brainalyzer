@@ -13,9 +13,9 @@ close all;
 % directory, etc.                                          %
 %--------------------Editable Constants--------------------%
 %----------------------------------------------------------%
-inDirTev = 'E:\Raw Data\';
-inDirSev = 'F:\Data\Doxy\648\';
-outDir = 'D:\Brainalyzer\Results\';
+inDirTev = 'D:\HPC-LEC\Raw-Data\829\';
+inDirSev = '';
+outDir = 'D:\HPC-LEC\Converted_Data\829\';
 
 analysis = 1;
 %Choose analysis value from list below
