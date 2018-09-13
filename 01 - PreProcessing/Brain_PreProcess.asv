@@ -215,18 +215,17 @@ function eeg = Brain_LoadWaveform(inDir, wave, timeVector, totalTime, freq)
             
             for i = 1:probe.ShankCount
                 sites = length(probe.Shank(i).Site);
-                eegTemp.data = NaN(sites, (totalTime+1)*fs);
                 %%Load all channels from shank at 24K
                 for j = 1:sites
                     ch = probe.Shank(i).Site(j).Number;
                     cprintf('text', ['Loading channel ', sprintf('%02d', ch), ':    0.0%% Complete']);  
                     %tStart = tic;
         
-                    startID = 1;
-                    
+                    s
                     for T1 = 0:chunkSize:totalTime
                         T2 = T1 + chunkSize;
-                                    
+            
+                        
                         if T2 > totalTime; T2=totalTime; end
                         if T2 == T1; break; end
             
@@ -240,11 +239,9 @@ function eeg = Brain_LoadWaveform(inDir, wave, timeVector, totalTime, freq)
             
                         %for ch  = 1:(wave.TotChs(2)-wave.TotChs(1)+1)
                         eegTemp.data(j, startID:endID) = dataTemp.streams.(wave.waveID).data(1, :);
-                        
-                        startID = endID + 1;
-                        printPercentage(T2, totalTime);
                     end
-                                        
+                    startID = endID + 1;
+                    printPercentage(T2, totalTime);
                 end
                 %36 backspaces
                 cprintf('text', '\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b');
