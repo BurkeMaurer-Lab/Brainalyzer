@@ -13,9 +13,13 @@ close all;
 % directory, etc.                                          %
 %--------------------Editable Constants--------------------%
 %----------------------------------------------------------%
-inDirTev = 'D:\HPC-LEC\Raw-Data\829\';
+
+%NMD 9/13/18 We should check to make sure that the directory that was
+%pointed to was the correct number of levels up. I kept pointing the
+%directory inside the rat directory.
+inDirTev = 'D:\HPC-LEC\Raw-Data\';
 inDirSev = '';
-outDir = 'D:\HPC-LEC\Converted_Data\829\';
+outDir = 'D:\HPC-LEC\Converted_Data\';
 
 analysis = 1;
 %Choose analysis value from list below
@@ -35,8 +39,6 @@ if analysis == 1
 else
     ratsToProcess = Interface_ReturnRatsToProcess(outDir);
 end
-
-
 
 %----------------------------------------------------------%
 %----------------------------------------------------------%

@@ -14,6 +14,9 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
     % -cmPERpix
     %    *Centimeter's per pixel count. Necessary for velocity and
     %    acceleration data
+    
+    %%NMD 9/13/18 The cmPERpix should be in the template since that's going
+    %%to change depending on the project, room, and maze.
     cmPERpix = 0.27125;
     
     % -inputDir4TDT
@@ -317,5 +320,5 @@ function eegTemp = Brain_LoadWaveform(inDir, wave, dataType, totalTime, freq)
 %         end
 %     end
     
-    eegTemp.fs = fs;
+%     eegTemp.fs = fs;
 end

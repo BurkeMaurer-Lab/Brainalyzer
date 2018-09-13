@@ -41,7 +41,7 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, blocks)
             %  First, let's verify that all info from TDT matches what we expect from the template file
             % return an error if there is a mismatch
             
-            holderData = TDT2mat([inDirTev, blockID, '\'], 'T1', 1, 'T2', 2, 'VERBOSE', 0);
+            holderData = TDT2mat_NMD([inDirTev, blockID, '\'], 'T1', 1, 'T2', 2, 'VERBOSE', 0);
             streamIDs = [];
             
             for j = 1:size(ratInfo.wave, 2)
@@ -132,7 +132,7 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, blocks)
                         fprintf(notes, '\t\tPre_Processed: Yes\n');
                         
                         ansr = input('Would you like to sort this waveform for spikes?\n', 's');
-                        validatedAnsr = validatestring(ansr, {'Yes', 'No'});
+                        validatedAnsr = validatestring(ansr, {'Yes', 'No', 'yes', 'no', 'y', 'n', 'Y', 'N'});
                         
                         fprintf(notes, ['\t\tSpike_Sorted: ', validatedAnsr, '\n']);
                         
@@ -154,7 +154,7 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, blocks)
                         
                         fprintf(notes, ['\t\tChannels: 1-', num2str(size(holderData.streams.(streamIDs(k, :)).data, 1)), '\n']);
                         
-                        ansr = input('Enter bad channels for this waveform\n', 's');
+                        ansr = input('Enter bad channels for this waveform\nHit Enter if no bad channels\n', 's');
                         user_badCh = '';
                         if isempty(ansr)
                             user_badCh = '-';
