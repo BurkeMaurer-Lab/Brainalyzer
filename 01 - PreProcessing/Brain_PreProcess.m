@@ -52,7 +52,7 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
         timeVector = Brain_parseText(notesDir, 'ver', 'Brain', 'voi', 'epochTimes');
     end
     
-    dataInfo = TDT2mat(inputDirT, 'T1', 1, 'T2', 1.05, 'STORE', {wavesBlock.wave(1).waveID}, 'VERBOSE', 0);
+    dataInfo = TDT2mat_NMD(inputDirT, 'T1', 1, 'T2', 1.05, 'STORE', {wavesBlock.wave(1).waveID}, 'VERBOSE', 0);
     
     totalTime = str2double(dataInfo.info.duration(4:5))*60 ...
         + str2double(dataInfo.info.duration(1:2))*60*60 ...
@@ -119,7 +119,7 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
         
         T2 = T1 + chunkSize;
         
-        tempData = TDT2mat(inputDirT, 'TYPE', {'scalars'}, 'T1', T1, 'T2', T2, 'VERBOSE', 0);
+        tempData = TDT2mat_NMD(inputDirT, 'TYPE', {'scalars'}, 'T1', T1, 'T2', T2, 'VERBOSE', 0);
     
         xposR = tempData.scalars.RVn1.data(3, :);
         yposR = tempData.scalars.RVn1.data(4, :);
@@ -199,6 +199,7 @@ function eegTemp = Brain_LoadWaveform(inDir, wave, dataType, totalTime, freq)
 
     eegTemp.data = [];
     chunkSize = 50;
+    prevMsg = [];
     
     %wave = waveInfo.wave;
     %clear waveInfo;
@@ -212,7 +213,7 @@ function eegTemp = Brain_LoadWaveform(inDir, wave, dataType, totalTime, freq)
         cprintf('text', ['Loading waveform ', wave.waveID, ': ']);
         startID = 1;
         
-        printPercentage(0, totalTime);
+        prevMsg = printPercentage(0, totalTime, prevMsg);
         
         tStart = tic;
         
@@ -239,7 +240,7 @@ function eegTemp = Brain_LoadWaveform(inDir, wave, dataType, totalTime, freq)
             
             startID = endID + 1;
             
-            printPercentage(T2, totalTime);
+            prevMsg = printPercentage(T2, totalTime, prevMsg);
         end
         
         tEnd = toc(tStart);
