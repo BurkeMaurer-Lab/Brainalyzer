@@ -66,9 +66,7 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
                 inDir = inputDirS;
             end
             
-            clc;
-            cprintf('-blue', ['Block ', blockID, ': Pre-Processing\n\n']);
-            eeg.(wavesBlock.wave(i).Name) = Brain_LoadWaveform(inDir, wavesBlock.wave(i), timeVector, totalTime, eeg.fs);
+            eeg.(wavesBlock.wave(i).Name) = Brain_LoadWaveform(inDir, blockID, wavesBlock.wave(i), timeVector, totalTime, eeg.fs);
         end
     end
     
@@ -194,15 +192,19 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
         
 end
 
-function eeg = Brain_LoadWaveform(inDir, wave, timeVector, totalTime, freq)
+function eeg = Brain_LoadWaveform(inDir, blockID, wave, timeVector, totalTime, freq)
 
     eeg.data = [];
     eeg.ts = [];
     
-    chunkSize = 50;
+    chunkSize = 25;
     
     %wave = waveInfo.wave;
     %clear waveInfo;
+    
+    clc;
+    cprintf('-blue', ['Block ', blockID, ': Pre-Processing\n\n']);
+    
     
     if strcmp(wave.Type, 'tev')
         if strcmp(wave.Sorted, 'Yes')
@@ -214,10 +216,14 @@ function eeg = Brain_LoadWaveform(inDir, wave, timeVector, totalTime, freq)
             clear temp;
             
             for i = 1:probe.ShankCount
+                clc;
+                cprintf('-blue', ['Block ', blockID, ': Pre-Processing\n\n']);
+                
                 sites = length(probe.Shank(i).Site);
-                eegTemp.data = NaN(sites, (totalTime+1)*fs);
+                eegTemp.data = NaN(sites, (totalTime+1)*freq);
+                
                 %%Load all channels from shank at 24K
-                for j = 1:sites
+                for j = 1:2 % sites
                     ch = probe.Shank(i).Site(j).Number;
                     cprintf('text', ['Loading channel ', sprintf('%02d', ch), ':    0.0%% Complete']);  
                     %tStart = tic;
@@ -225,12 +231,13 @@ function eeg = Brain_LoadWaveform(inDir, wave, timeVector, totalTime, freq)
                     startID = 1;
                     
                     for T1 = 0:chunkSize:totalTime
+                        tStart = tic;
                         T2 = T1 + chunkSize;
-                                    
+                        
                         if T2 > totalTime; T2=totalTime; end
                         if T2 == T1; break; end
             
-                        dataTemp = TDT2mat(inDir, 'TYPE', {'streams'}, ...
+                        dataTemp = TDT2mat_NMD(inDir, 'TYPE', {'streams'}, ...
                             'STORE', {wave.waveID}, ...
                             'CHANNEL', ch, ...
                             'T1', T1, 'T2', T2, 'VERBOSE', 0);
@@ -241,21 +248,33 @@ function eeg = Brain_LoadWaveform(inDir, wave, timeVector, totalTime, freq)
                         %for ch  = 1:(wave.TotChs(2)-wave.TotChs(1)+1)
                         eegTemp.data(j, startID:endID) = dataTemp.streams.(wave.waveID).data(1, :);
                         
+                        if T1 ~= 0
+                            cprintf('text', '\b\b\b\b\b\b');
+                        end
+                        
                         startID = endID + 1;
                         printPercentage(T2, totalTime);
+                        
+                        tEnd = toc(tStart);
+                        cprintf('text', [', ', sprintf('%02d', floor(tEnd)), ' s']);
                     end
-                                        
+                    cprintf('text', '\n');                 
                 end
                 %36 backspaces
-                cprintf('text', '\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b');
+                cprintf('text', '\n');
+                %cprintf('text', '\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b');
                 
                 fs = dataTemp.streams.(wave.waveID).fs;
                 
                 % Trim the recordings based on timeVector and extra 0's at end
-                xx = find(~isnan(eegTemp.data(1, :)), 1, 'last');
-                eegTemp.data(:, xx:end) = [];
-                yy = find(eegTemp.data(1, :) ~= 0, 1, 'last');
-                eegTemp.data(:, yy:end) = [];
+                if isnan(eegTemp.data(1, end))
+                    xx = find(~isnan(eegTemp.data(1, :)), 1, 'last');
+                    eegTemp.data(:, (xx+1):end) = [];
+                end
+                if eegTemp.data(1, end) == 0
+                    yy = find(eegTemp.data(1, :) ~= 0, 1, 'last');
+                    eegTemp.data(:, (yy+1):end) = [];
+                end
                 
                 ts = (0 ...
                     : 1/fs ...
@@ -265,22 +284,25 @@ function eeg = Brain_LoadWaveform(inDir, wave, timeVector, totalTime, freq)
                     if epchs == 1
                         index1 = 1;
                         %index2 = fs * timeVector(epchs, 1);
-                        index2 = find(ts < timeVector(epchs, 1), 1, 'last');    %timeVector(epchs, 1) * eeg.fs;
+                        index2 = find(ts <= timeVector(epchs, 1), 1, 'last') - 1;    %timeVector(epchs, 1) * eeg.fs;
                     elseif epchs == size(timeVector, 1)+1
                         %index1 = fs * timeVector(epchs-1, 2);
                         %index2 = size(eegTemp, 2) * fs;
-                        index1 = find(ts > timeVector(epchs-1, 2), 1, 'first'); %timeVector(epchs-1, 2) * eeg.fs;
-                        index2 = size(ts, 2) * eeg.fs;
+                        index1 = find(ts >= timeVector(epchs-1, 2), 1, 'first'); %timeVector(epchs-1, 2) * eeg.fs;
+                        index2 = size(ts, 2);
                     else
                         %index1 = fs * timeVector(epchs-1, 2);
                         %index2 = fs * timeVector(epchs, 1);
-                        index1 = find(ts > timeVector(epchs-1, 2), 1, 'first'); %timeVector(epchs-1, 2) * eeg.fs;
-                        index2 = find(ts < timeVector(epchs, 1), 1, 'last');    %timeVector(epchs, 1) * eeg.fs;     
+                        index1 = find(ts >= timeVector(epchs-1, 2), 1, 'first'); %timeVector(epchs-1, 2) * eeg.fs;
+                        index2 = find(ts <= timeVector(epchs, 1), 1, 'last') - 1;    %timeVector(epchs, 1) * eeg.fs;     
                     end
                     
-                    eegTemp.data(:, index1:index2) = [];
-                    ts(:, index1:index2) = [];
+                    eegTemp.data(:, index1:index2) = NaN;
+                    ts(:, index1:index2) = NaN;
                 end
+                
+                eegTemp.data(:, isnan(eegTemp.data(1, :))) = [];
+                ts(:, isnan(ts(1, :))) = [];
                 
                 %Klustering Stuff
                 
@@ -289,6 +311,9 @@ function eeg = Brain_LoadWaveform(inDir, wave, timeVector, totalTime, freq)
                 gap = wave.RecoFreq / wave.SaveFreq;
         
                 eeg.data = eegTemp.data(1:gap:end);
+                
+                clc;
+                
             end
             
             eeg.ts = ts(1:gap:end);

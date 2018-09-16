@@ -137,8 +137,11 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, blocks)
                         fprintf(notes, ['\t\tSpike_Sorted: ', validatedAnsr, '\n']);
                         
                         if strcmp(validatedAnsr, 'Yes')
-                            fprintf(notes, ['\t\t\tProbe: ', ratInfo.wave(xx).Probe, '\n']);
-                            fprintf(notes, ['\t\t\tMap: ', ratInfo.wave(xx).Map, '\n']);
+                            validatedProbe = validatestring(ratInfo.wave(xx).Probe, {'Cam_eSeries64', 'Cam_fSeries64'});
+                            validatedMap = validatestring(ratInfo.wave(xx).Map, {'Linear', 'UShaped'});
+                            
+                            fprintf(notes, ['\t\t\tProbe: ', validatedProbe, '\n']);
+                            fprintf(notes, ['\t\t\tMap: ', validatedMap, '\n']);
                         end
                         
                         fprintf(notes, ['\n\t\tRecord_Frequency: ~', num2str(floor(holderData.streams.(streamIDs(k, :)).fs/1000)), ' KHz\n']);
