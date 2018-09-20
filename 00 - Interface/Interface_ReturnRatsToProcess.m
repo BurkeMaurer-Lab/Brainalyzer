@@ -1,3 +1,4 @@
+%These inputs need to be checked to make sure they're valid at some point.
 function rats = Interface_ReturnRatsToProcess(inDir)
 
     ratFolders = dir(inDir);
