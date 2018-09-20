@@ -169,9 +169,9 @@ function voi_out = parseBRAIN(inDir, voi)
     lines = CountLineNum(inDir);
     toParse = fopen(inDir);
     
-    possCares = {'Name', 'Pre_Processed', 'Spike_Sorted', ...
+    possCares = {'Name', 'Pre_Process', 'Spike_Sort', ...
         'Start_Time', 'End_Time', 'Total_Time', 'Epoch_Times', ...
-        'Saved_Frequency', ...
+        'Record_Frequency', 'Saved_Frequency', ...
         'Channels', 'Bad_Channels', 'Probe'};
     
     if strcmp(voi, 'All')
@@ -196,18 +196,18 @@ function voi_out = parseBRAIN(inDir, voi)
                         voi_out.wave(waveNum).Name = delim_colon{2};
                     elseif strcmp(delim_colon{1}, 'Type')
                         voi_out.wave(waveNum).Type = delim_colon{2};
-                    elseif strcmp(delim_colon{1}, 'Pre_Processed')
-                        voi_out.wave(waveNum).Processed = delim_colon{2};
-                    elseif strcmp(delim_colon{1}, 'Spike_Sorted')
-                        voi_out.wave(waveNum).Sorted = delim_colon{2};
+                    elseif strcmp(delim_colon{1}, 'Pre_Process')
+                        voi_out.wave(waveNum).Process = delim_colon{2};
+                    elseif strcmp(delim_colon{1}, 'Spike_Sort')
+                        voi_out.wave(waveNum).Sort = delim_colon{2};
                     elseif strcmp(delim_colon{1}, 'Probe')
                         voi_out.wave(waveNum).Probe = delim_colon{2};
                     elseif strcmp(delim_colon{1}, 'Map')
                         voi_out.wave(waveNum).Map = delim_colon{2};
                     elseif strcmp(delim_colon{1}, 'Record_Frequency')
-                        voi_out.wave(waveNum).RecoFreq = str2double(erase(delim_colon{2}, ["~", "KHz"]));
+                        voi_out.wave(waveNum).RecoFreq = str2double(erase(delim_colon{2}, " Hz"));
                     elseif strcmp(delim_colon{1}, 'Saved_Frequency')
-                        voi_out.wave(waveNum).SaveFreq = str2double(erase(delim_colon{2}, ["~", "KHz"]));
+                        voi_out.wave(waveNum).SaveFreq = str2double(erase(delim_colon{2}, " Hz"));
                     elseif strcmp(delim_colon{1}, 'Channels')
                         delim_colon{2} = strrep(delim_colon{2}, '-', ' ');
                         voi_out.wave(waveNum).TotChs = str2num(delim_colon{2});
