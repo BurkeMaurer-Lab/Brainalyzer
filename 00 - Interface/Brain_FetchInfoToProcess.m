@@ -51,7 +51,8 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, block)
             if strcmp(ratInfo.wave(j).Type, 'tev')
                 inputDir = [inDirTev, blockID, '\'];
                 ratInfo.wave(j).ID = validatestring(ratInfo.wave(j).ID, fieldnames(holderData.streams));
-                if size(holderData.streams.(ratInfo.wave(j).ID).data, 1) ~= str2double(ratInfo.wave(j).Channels)
+                chans = str2num(strrep(ratInfo.wave(j).Channels, '-', ' '));
+                if size(holderData.streams.(ratInfo.wave(j).ID).data, 1) ~= (chans(2) - chans(1) + 1)
                     cprintf('*err', 'ERROR:\n');
                     cprintf('err', 'Waveform channel counts do not match up\n');
                 end
@@ -85,9 +86,9 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, block)
             fprintf(notes, ['\t\tEpoch', sprintf('%02d', j), '_End- ', exp.EpochEnd{j}, '\n\n']);
         end
 
-        if exist([inDirSev, blockID], 'dir')
+        %if exist([inDirSev, blockID], 'dir')
             %Run function to analyze chunks of sev
-        else
+        %else
             fprintf(notes, 'Waveform Info:\n');
 
             %inputDir = [inDirTev, blockID, '\'];
@@ -145,7 +146,7 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, block)
                     %I think this always needs to be validated
 %                         if strcmp(validatedAnsr, 'Yes')
                     validatedProbe = validatestring(ratInfo.wave(xx).Probe, {'Cam_eSeries64', 'Cam_fSeries64', 'NN_32Linear'});
-                    validatedMap = validatestring(ratInfo.wave(xx).Map, {'Linear', 'UShaped'});
+                    validatedMap = validatestring(ratInfo.wave(xx).Map, {'Linear', 'UShaped', 'View'});
 
                     fprintf(notes, ['\t\t\tProbe: ', validatedProbe, '\n']);
                     fprintf(notes, ['\t\t\tMap: ', validatedMap, '\n']);
@@ -179,7 +180,7 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, block)
                     fprintf(notes, ['\t\tBad_Channels: ', user_badCh, '\n\n']);
                 end
             end
-        end
+        %end
     end
 end        
             

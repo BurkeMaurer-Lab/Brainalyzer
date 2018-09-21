@@ -80,7 +80,7 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
 %             eeg.(wavesBlock.wave(i).Name) = Brain_NoiseReduction(eeg.(wavesBlock.wave(i).Name), wavesBlock.wave(i), timeVector);
             
             %Load the position data (commented for now until next push)
-            eeg.(wavesBlock.wave(i).Name) = Brain_LoadPosition(inputDirT, eeg.(wavesBlock.wave(i).Name), timeVector);
+            eeg.(wavesBlock.wave(i).Name) = Brain_LoadPosition(inputDirT, eeg.(wavesBlock.wave(i).Name), totalTime, timeVector);
 %             try eeg.(wavesBlock.wave(i).Name) = Brain_LoadPosition(inputDirT, eeg.(wavesBlock.wave(i).Name), wavesBlock.wave(i), timeVector);
 %             catch
 %                 cprintf('err', '\n\nSkipping position extraction because of error in function');
@@ -247,7 +247,7 @@ function eeg = Brain_LoadWaveform(inDir, outDir, blockID, wave, timeVector, tota
     end %shank indexing
 end
 
-function eeg = Brain_LoadPosition(inDir, eeg, timeVector)
+function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
 
     %Should be a user
     cmPERpix = 0.27125;
@@ -256,17 +256,26 @@ function eeg = Brain_LoadPosition(inDir, eeg, timeVector)
     %Extra padding in case the first couple of values are missing from the
     %epoch data. This is included so that "inpaintn" will have a reference.
     %Might become an advanced user input later.
-    posPad = 60; %Samples. Currently this would be about two seconds.
-
+    
     epochNames = eeg.epochNames;
     numEpochs = length(epochNames);
+    posMat = [];
+    posTS = [];
+
+    for i = 1:totalTime
+        tempData = TDT2mat_NMD(inDir, 'TYPE', {'scalars'}, 'T1', 0, 'T2', 0, 'VERBOSE', 0);
+        %NMD 9/18/18 I'm pretty sure the wave type of the position tracking
+        %doesn't ever change. Not 100% though.
+        
+        posMat = [posMat, tempData.scalars.RVn1.data];
+        posTS = [posTS, tempData.scalars.RVn1.ts];
+    end    
     
-    tempData = TDT2mat_NMD(inDir, 'TYPE', {'scalars'}, 'T1', 0, 'T2', 0, 'VERBOSE', 0);
-    %NMD 9/18/18 I'm pretty sure the wave type of the position tracking
-    %doesn't ever change. Not 100% though.
+    %Samples. Currently this would be about two seconds.
+    posPad = round(1/(testData.scalars.RVn1.ts(2) - testData.scalars.RVn1.ts(1)))*2;
+    
     %Extract position and convert from pixels to cm
-    posMat = tempData.scalars.RVn1.data .* cmPERpix;
-    posTS = tempData.scalars.RVn1.ts;
+    posMat = posMat .* cmPERpix;
     eegFS = eeg.fs;
     
     %Iterate through the epochs

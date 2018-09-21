@@ -13,9 +13,9 @@ ratBlocks = {};
 % directory, etc.                                          %
 %--------------------Editable Constants--------------------%
 %----------------------------------------------------------%
-inDirTev = 'D:\HPC-LEC\Raw-Data\';
-inDirSev = '';
-outDir = 'D:\HPC-LEC\Converted_Data\';
+inDirTev = 'E:\Raw Data\';
+inDirSev = 'E:\Raw Data\';
+outDir = 'D:\Brainalyzer\Results\';
 
 analysis = 1;
 %Choose analysis value from list below
