@@ -106,7 +106,7 @@ function eeg = Brain_LoadWaveform(inDir, outDir, blockID, wave, timeVector, tota
     msg = [];
     eeg.fs = wave.SaveFreq;
     
-    spikeDir = [outDir, '02 - Spike Sorting\', {wave.waveID}, '\'];
+    spikeDir = [outDir, '02 - Spike Sorting\', char({wave.waveID}), '\'];
     if ~exist(spikeDir, 'dir'), mkdir(spikeDir), end
     
     gap = round(wave.RecoFreq / wave.SaveFreq);
