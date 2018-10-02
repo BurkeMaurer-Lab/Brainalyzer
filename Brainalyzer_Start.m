@@ -13,9 +13,9 @@ ratBlocks = {};
 % directory, etc.                                          %
 %--------------------Editable Constants--------------------%
 %----------------------------------------------------------%
-inDirTev = 'E:\Raw Data\';
+inDirTev = 'C:\Users\HAL2\Desktop\Raw Data\';
 inDirSev = 'E:\Raw Data\';
-outDir = 'D:\Brainalyzer\Results\';
+outDir = 'C:\Users\HAL2\Desktop\Brainalyzer\Results\';
 
 analysis = 1;
 %Choose analysis value from list below
@@ -38,7 +38,7 @@ end
 ratBlocks = cell(size(ratsToProcess, 2), 1);
 %Collect the numbers of the rats that get an error during processing. This
 %will eventually be converted to an error message in future iterations of
-%the code.
+%the code. Dylans is a butt
 errRats = [];
 ratIdx = 0;
 
@@ -57,15 +57,15 @@ ratIdx = 0;
 while ratIdx < size(ratsToProcess, 2)
     ratIdx = ratIdx + 1;
     blockIdx = 0;
+        
     if analysis == 1
         toDir = [outDir, ratsToProcess(ratIdx).ID, '\'];
+        ratInfo = Brain_FetchRatInfo(toDir, ratsToProcess(ratIdx).ID);
         
         inDirT = [inDirTev, ratsToProcess(ratIdx).ID, '\'];
         inDirS = [inDirSev, ratsToProcess(ratIdx).ID, '\'];
-        
-        ratInfo = Brain_FetchRatInfo(toDir, ratsToProcess(ratIdx).ID);
-        
-%         blocks = Brain_FetchBlocksToProcess(inDirT, ratsToProcess(ratIdx).ID);
+                
+%       blocks = Brain_FetchBlocksToProcess(inDirT, ratsToProcess(ratIdx).ID);
         try
             blocks = Brain_FetchBlocksToProcess(inDirT, ratsToProcess(ratIdx).ID);
         catch 
@@ -99,26 +99,31 @@ while ratIdx < size(ratsToProcess, 2)
             end
         end
     elseif analysis > 1
-        blocks = Brain_FetchBlocksToAnalyze(outDir, ratNum, analysis);
+        blocks = Brain_FetchBlocksToAnalyze(outDir, ratsToProcess(ratIdx).ID, analysis);
     end
     ratBlocks{ratIdx} = blocks;
 end
 
 for ratIdx = 1:size(ratsToProcess, 2)
-    if analysis == 1
-        toDir = [outDir, ratsToProcess(ratIdx).ID, '\'];
-        blocks = ratBlocks{ratIdx};
-        
-        %Iterate through rat's blocks
-        for j = 1:size(blocks, 2)
-            Brain_PreProcess(inDirTev, inDirSev, toDir, ratsToProcess(ratIdx).ID, blocks(j));
-        end
-    elseif analysis > 1
-        for j = 1:size(blocks, 2)
+    toDir = [outDir, ratsToProcess(ratIdx).ID, '\'];
+    ratInfo = Brain_FetchRatInfo(toDir, ratsToProcess(ratIdx).ID);
+    
+    for j = 1:size(blocks, 2)
+    %Iterate through rat's blocks
+        blocks = char(ratBlocks{ratIdx}(j));
+        if analysis == 1
+            Brain_PreProcess(inDirTev, inDirSev, toDir, ratsToProcess(ratIdx).ID, blocks);
+        elseif analysis > 1
+            [wave, epochs] = Brain_PickWaveAndEpoch([toDir, blocks, '\'], ratInfo);
             if analysis == 2
-           %Run noise reduction
+                %Run noise reduction
             elseif analysis == 3
-           %Run module 3
+                Brain_NoiseFiltering
+            elseif analysis == 5
+                Brain_PowerSpectralDensity([toDir, blocks, '\'], wave, epochs, [0, 3, 5, 15, 35, 100], 'MODE', 'clean');
+            elseif analysis == 6
+                Brain_CurrentSourceDensity([toDir, blocks, '\'], wave, epochs, [-1000 1000]);
+            
             end
         end
     end
