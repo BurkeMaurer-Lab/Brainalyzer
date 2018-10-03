@@ -1,6 +1,7 @@
 function blocks2analyze = Brain_FetchBlocksToAnalyze(inDir, ratNum, analysis)
 
-    tasks = {'\01 - PreProcessed\', '\02 - Noise Reduction\'};
+    tasks = {'\01 - PreProcessed\', '\02 - Spike Sorting\', '\03 - Noise Reduction\', ...
+        '\04 - Position Tracker\', '\05 - Power Spectra\', '\06 - Current Source Desnity\'};
     
     blocks.names = [];
     blocks.status = [];
@@ -33,11 +34,15 @@ function blocks2analyze = Brain_FetchBlocksToAnalyze(inDir, ratNum, analysis)
     end
     clear folders;
     
-    files = dir([inDir, ratID, '\']);
+    files = dir([inDir, ratID, '\']);    
+    
     for i = 1:length(files)
-        delim_dash = strsplit(files(i).name, '-'); %delim_dash{1} is date, delim_dash{2} is time of folder
-        %checkDir = [inDir, ratID, '\', files(i).name, '\'];
-        blocks.names = [blockNames; files(i).name];
+%         delim_dash = strsplit(files(i).name, '-'); %delim_dash{1} is date, delim_dash{2} is time of folder
+%         %checkDir = [inDir, ratID, '\', files(i).name, '\'];
+%         blocks.names = [blocks.names; files(i).name];
+        if ~contains(files(i).name, '.')
+            blocks.names = [blocks.names; files(i).name];
+        end
     end
     
     for i = 1:size(blocks.names, 1)
@@ -73,14 +78,14 @@ function blocks2analyze = Brain_FetchBlocksToAnalyze(inDir, ratNum, analysis)
     %----------------------------------------------------------%
     %----------------------------------------------------------%
     
-    if size(blockNames, 1) == 0
+    if size(blocks.names, 1) == 0
         cprintf('err', 'Error:\n');
         cprintf('text', 'No blocks for ');
         cprintf('comment', ['Rat ', num2str(ratNum)]);
         cprintf('text', ' were found in the directory\n');
         return
     else
-        cprintf('key', [num2str(size(blocks.name, 1)), ' Blocks']);
+        cprintf('key', [num2str(size(blocks.names, 1)), ' Blocks']);
         cprintf('text', ' found for ');
         cprintf([0, 0.75, 0.75], ['Rat ', num2str(ratNum), '\n']);
     end
@@ -112,12 +117,12 @@ function blocks2analyze = Brain_FetchBlocksToAnalyze(inDir, ratNum, analysis)
     ansr = input('\n\nPlease list the numbers of the blocks you wish to analyze (with spaces in between)\nOr enter "all" to analyze every block\n', 's');
     cprintf('text', '\n');
     delim_space = strsplit(ansr, ' ');
-    if size(delim_space, 2) > size(blocks.name, 1)
+    if size(delim_space, 2) > size(blocks.names, 1)
         clc;
         cprintf('*err', 'ERROR:\n');
         cprintf('err', 'The number of values entered is larger than the number of blocks\n');
         return;
-    elseif max(str2double(delim_space)) > size(blocks.name, 1)
+    elseif max(str2double(delim_space)) > size(blocks.names, 1)
         clc;
         cprintf('*err', 'ERROR:\n');
         cprintf('err', 'One of the values entered is too high\n');
@@ -132,7 +137,7 @@ function blocks2analyze = Brain_FetchBlocksToAnalyze(inDir, ratNum, analysis)
             %cprintf('*err', 'ERROR:\n');
             cprintf('err', ['Block ', blocks.names(block_id), ' has not been processed and can not be analyzed\n']);
         else
-            blocks2analyze(j) = blocks.names(block_id);
+            blocks2analyze(j) = blocks.names(block_id, :);
             j = j + 1;
         end
     end

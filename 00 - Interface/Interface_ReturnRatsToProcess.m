@@ -2,11 +2,12 @@
 function rats = Interface_ReturnRatsToProcess(inDir)
 
     ratFolders = dir(inDir);
-    ratFolders = ratFolders(~ismember({ratFolders.name}, {'.', '..'}));
+    ratFolders = ratFolders(~contains({ratFolders.name}, {'.', '..'}));
     
     cprintf('text', 'Select which rats you would like to analyze (Seperated by spaces)\n');
-    
+       
     for i = 1:size(ratFolders, 1)
+        
         cprintf('text', ['\t', sprintf('%02d', i), ')  ']);
         cprintf('text', [ratFolders(i).name, '\n']);
     end
