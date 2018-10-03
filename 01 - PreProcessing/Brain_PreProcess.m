@@ -265,7 +265,7 @@ function eeg = Brain_LoadPosition(inDir, eeg, timeVector)
     %NMD 9/18/18 I'm pretty sure the wave type of the position tracking
     %doesn't ever change. Not 100% though.
     %Extract position and convert from pixels to cm
-    posMat = tempData.scalars.RVn1.data .* cmPERpix;
+    posMat = tempData.scalars.RVn1.data;
     posTS = tempData.scalars.RVn1.ts;
     eegFS = eeg.fs;
     
@@ -305,6 +305,10 @@ function eeg = Brain_LoadPosition(inDir, eeg, timeVector)
             yposG = inpaintn(yposG);
         end
         
+        eeg.data.(char(epochNames(epochIdx))).rawPos.redPos = [xposR; yposR];
+        eeg.data.(char(epochNames(epochIdx))).rawPos.greenPos = [xposG; yposG];
+        eeg.data.(char(epochNames(epochIdx))).rawPos.ts = epochPosTS;
+        
         %If position tracking noise reduction is turned on, it should go
         %here.
 
@@ -321,5 +325,6 @@ function eeg = Brain_LoadPosition(inDir, eeg, timeVector)
         
         eeg.data.(char(epochNames(epochIdx))).redPos = [xposR; yposR];
         eeg.data.(char(epochNames(epochIdx))).greenPos = [xposG; yposG];
+        eeg.data.(char(epochNames(epochIdx))).cm2pix = cmPERpix;
     end
 end
