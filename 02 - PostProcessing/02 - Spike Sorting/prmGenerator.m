@@ -1,4 +1,4 @@
-function prmGenerator(destinationFolder, data_name, number_of_channels, samplingFrequency, filter_low, filter_high_factor, threshold_weak, threshold_strong)
+function prmGenerator(destinationFolder, data_name, number_of_channels, samplingFrequency, filter_low, filter_high_factor, threshold_weak, threshold_strong, spike_direction)
     
     prmFile = fopen([destinationFolder '\param.prm'],'wt');
     fprintf(prmFile, ['experiment_name = ''' char(data_name) '''']);
@@ -50,7 +50,7 @@ function prmGenerator(destinationFolder, data_name, number_of_channels, sampling
     fprintf(prmFile,'\n');
     fprintf(prmFile, '     threshold_weak_std_factor=%d,', threshold_weak);
     fprintf(prmFile,'\n');
-    fprintf(prmFile, '     detect_spikes=''negative'',');
+    fprintf(prmFile, ['     detect_spikes=''', char(spike_direction), ''',']);
     fprintf(prmFile,'\n');
     fprintf(prmFile,'\n');
     fprintf(prmFile, '     connected_component_join_size=1,');

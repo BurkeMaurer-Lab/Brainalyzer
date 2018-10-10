@@ -2,8 +2,7 @@
 %entire recording if there's no notes file. Most of our older data won't
 %have them and they might be a pain to make.
 
-%NMD 10/9/18 We need to add in a functionality that will prompt the user
-%for input in the case of a missing epoch time stamp.
+%NMD 10/9/18 
 
 function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, block)
 

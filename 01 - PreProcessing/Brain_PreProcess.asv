@@ -242,8 +242,7 @@ function eeg = Brain_LoadWaveform(inDir, outDir, blockID, wave, timeVector, tota
             shankData(:, isnan(shankData(1, :))) = [];
             startChan = probe.Shank(shankIdx).Site(1).Number;
             endChan = probe.Shank(shankIdx).Site(end).Number;
-            %If this changes make sure to change the file name in the spike
-            %sorting code as well.
+            %If this changes make sure to change the file name in the s
             outputName = strcat("Chan_", num2str(startChan), "-", num2str(endChan));
             
             %%%Step 1: Delete any existing spikesorting data and create a 
