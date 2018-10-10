@@ -46,6 +46,7 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
             return;
         end
     end
+    numWaves = size(wavesBlock.wave, 2);
     dataInfo = TDT2mat_NMD(inputDirT, 'T1', 1, 'T2', 1.05, 'STORE', {wavesBlock.wave(1).waveID}, 'VERBOSE', 0);
     
     totalTime = str2double(dataInfo.info.duration(4:5))*60 ...
@@ -58,30 +59,30 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
     %eeg.fs = floor(dataInfo.streams.(wavesBlock.wave(1).waveID).fs);
 
     %Iterate through waves
-    for i = 1:size(wavesBlock.wave, 2)
-        if strcmp(wavesBlock.wave(i).Process, 'Yes')
+    for waveIdx = 1:numWaves
+        if strcmp(wavesBlock.wave(waveIdx).Process, 'Yes')
             %Clear eeg for each new block
             eeg = [];
-            if strcmp(wavesBlock.wave(i).Type, 'tev')
+            if strcmp(wavesBlock.wave(waveIdx).Type, 'tev')
                 inDir = inputDirT;
-            elseif strcmp(wavesBlock.wave(i).Type, 'sev')
+            elseif strcmp(wavesBlock.wave(waveIdx).Type, 'sev')
                 inDir = inputDirS;
             end
             
             %Extract the eeg data for both spikesorting and epochs
-            eeg.(wavesBlock.wave(i).Name) = Brain_LoadWaveform(inDir, blockDir, blockID, wavesBlock.wave(i), timeVector, totalTime);
-%             try eeg.(wavesBlock.wave(i).Name) = Brain_LoadWaveform(inDir, blockDir, blockID, wavesBlock.wave(i), timeVector, totalTime);
+            eeg.(wavesBlock.wave(waveIdx).Name) = Brain_LoadWaveform(inDir, blockDir, blockID, wavesBlock.wave(waveIdx), timeVector, totalTime);
+%             try eeg.(wavesBlock.wave(waveIdx).Name) = Brain_LoadWaveform(inDir, blockDir, blockID, wavesBlock.wave(waveIdx), timeVector, totalTime);
 %             catch
 %                 cprintf('err', '\n\nSkipping block because of error in loading the eeg data.');
 %                 continue;
 %             end
             
             %Perform noise reduction on EEG data
-%             eeg.(wavesBlock.wave(i).Name) = Brain_NoiseReduction(eeg.(wavesBlock.wave(i).Name), wavesBlock.wave(i), timeVector);
+%             eeg.(wavesBlock.wave(waveIdx).Name) = Brain_NoiseReduction(eeg.(wavesBlock.wave(waveIdx).Name), wavesBlock.wave(waveIdx), timeVector);
             
             %Load the position data (commented for now until next push)
-            eeg = Brain_LoadPosition(inputDirT, eeg.(wavesBlock.wave(i).Name), totalTime, timeVector);
-%             try eeg.(wavesBlock.wave(i).Name) = Brain_LoadPosition(inputDirT, eeg.(wavesBlock.wave(i).Name), wavesBlock.wave(i), timeVector);
+            eeg = Brain_LoadPosition(inputDirT, eeg.(wavesBlock.wave(waveIdx).Name), totalTime, timeVector);
+%             try eeg.(wavesBlock.wave(waveIdx).Name) = Brain_LoadPosition(inputDirT, eeg.(wavesBlock.wave(waveIdx).Name), wavesBlock.wave(waveIdx), timeVector);
 %             catch
 %                 cprintf('err', '\n\nSkipping position extraction because of error in function');
 %             end
@@ -90,7 +91,7 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
             
             if ~exist(outputDir, 'dir'), mkdir(outputDir), end
             
-            saveName = [outputDir, wavesBlock.wave(i).Name, '_data.mat'];
+            saveName = [outputDir, wavesBlock.wave(waveIdx).Name, '_data.mat'];
             save(saveName, '-struct', 'eeg', '-v7.3');
             fprintf('\nData saved.\n')
             pause(3);
@@ -105,6 +106,11 @@ function eeg = Brain_LoadWaveform(inDir, outDir, blockID, wave, timeVector, tota
     eeg = [];
     msg = [];
     eeg.fs = wave.SaveFreq;
+    
+    if strcmp(wave.Sort, 'Yes')  
+        spikeDir = [outDir, '02 - Spike Sorting\', char({wave.waveID}), '\'];
+        if ~exist(spikeDir, 'dir'), mkdir(spikeDir), end
+    end
     
     gap = round(wave.RecoFreq / wave.SaveFreq);
     bigChanIdx = 0;
@@ -123,7 +129,7 @@ function eeg = Brain_LoadWaveform(inDir, outDir, blockID, wave, timeVector, tota
     %wave = waveInfo.wave;
     %clear waveInfo;
     
-    %Sort by shank, then throw at spike sorter, then down sample
+    %Sort by shank, save spike sorter data if necessary, then down sample
     homeSplit = strsplit(which('Brainalyzer_Start'), 'Brainalyzer_Start');
     homeDir = [homeSplit{1}, '\00 - Interface\Constants\'];
     temp = load([homeDir, wave.Probe, '.mat']);
@@ -209,8 +215,6 @@ function eeg = Brain_LoadWaveform(inDir, outDir, blockID, wave, timeVector, tota
                     eeg.(char(epochNames(epochIdx))).ts = epochTS(idx1:idx2); 
                 end
             end
-            
-            
         end
         
         %Cut and save spike-sort data if required
@@ -238,10 +242,8 @@ function eeg = Brain_LoadWaveform(inDir, outDir, blockID, wave, timeVector, tota
             shankData(:, isnan(shankData(1, :))) = [];
             startChan = probe.Shank(shankIdx).Site(1).Number;
             endChan = probe.Shank(shankIdx).Site(end).Number;
+            %If this changes make sure to change the file name in the s
             outputName = strcat("Chan_", num2str(startChan), "-", num2str(endChan));
-            
-            
-            %%%% IAGO CAN WRITE HIS SPIKE SORTING STUFF IN HERE %%
             
             %%%Step 1: Delete any existing spikesorting data and create a 
             %directory for our shank 
@@ -249,74 +251,8 @@ function eeg = Brain_LoadWaveform(inDir, outDir, blockID, wave, timeVector, tota
                  mkdir(char(spikeDir), char(outputName)); %Make a directory for this shank's spike sorting data
             end
      
-            writedat(shankData, strcat(spikeDir, '\',outputName,'\', outputName, ".dat"))
-     
-         
-            %%%Step 2: Create our geometry file for klusta. The file format
-            %is .prb and we do it by calling the function
-            %Brain_CreateGeomFile which conveniently also returns the
-            %number of channels in the probe for future steps
-            number_of_live_channels = Brain_CreateGeomFile([char(spikeDir) '\' char(outputName)], wave.BadChs, wave.Probe, wave.Map, shankIdx);
-            
-            %%%Step 3: Create our parameter file for klusta. The file
-            %%%format is .prm and we do it by calling the function
-            %%%prmGenerator 
-            low_bandpass = 600;     %hard coded for beta version
-            high_bandpass = 0.25;   %hard coded for beta version
-            low_threshold = 2;      %hard coded for beta version
-            high_threshold = 4.5;   %hard coded for beta version 
-            prmGenerator([char(spikeDir) '\' char(outputName)], outputName, numSites, fs, low_bandpass, high_bandpass, low_threshold, high_threshold);
-            
-            %%%Step 4: Run automatic klustering with klusta. We already
-            %have the .prm, the .prb and the .dat files so we are ready
-            %to run klusta.
-            dos(['activate klusta && ' spikeDir(1) ': && cd / && cd ' char(spikeDir) '\' char(outputName) '&& klusta param.prm --overwrite'], '-echo');
-           
-            %%%Step 5: Create the XML file necessary for manual clustering.
-            xmlGenerator([char(spikeDir) '\' char(outputName)], outputName, number_of_live_channels, fs)
-            
-            %%%Step 6: Convert Klusta output to kluster input for manual
-            %%%clustering with kluster. This is done with the function
-            %%%ClusteringKlusta2Neurosuite
-            ConvertKlusta2Neurosuite([char(spikeDir) char(outputName)], outputName);
-            
-            % Step 7: Delete unnecessary files such as the .prm file, the
-            % .prb file, the .klustakwik2 firectory, the .spikedetekt
-            % directory, the kwik file and the kwx file.
-            %The following code has been commented out for testing
-            %purposes:
-%             fclose('all');
-%             %Delete .klustakwik2
-%             if exist([char(outDir) '\' char(outputName) '\.klustakwik2'],'file') ~= 0
-%                 rmdir([char(outDir) '\' char(outputName) '\.klustakwik2'], 's');
-%             end
-%             %Delete .spikedetekt
-%             if exist([char(outDir) '\' char(outputName) '\.spikedetekt'],'file') ~= 0
-%                 rmdir([char(outDir) '\' char(outputName) '\.spikedetekt'], 's');
-%             end
-%             %Delete param.prm
-%             if exist([char(outDir) '\' char(outputName) '\param.prm'],'file') ~= 0
-%                 delete([char(outDir) '\' char(outputName) '\param.prm']);
-%             end
-%             %Delete geom.prb 
-%             if exist([char(outDir) '\' char(outputName) '\geom.prb'],'file') ~= 0
-%                 delete([char(outDir) '\' char(outputName) '\geom.prb']);
-%             end
-%             %Delete kwik file
-%             if exist([char(outDir) '\' char(outputName) '\' char(outputName)  '.kwik'],'file') ~= 0
-%                 delete([char(outDir) '\' char(outputName) '\' char(outputName) '.kwik']);
-%             end
-%             %Delete kwx file 
-%             if exist([char(outDir) '\' char(outputName) '\' char(outputName)  '.kwx'],'file') ~= 0
-%                 delete([char(outDir) '\' char(outputName) '\' char(outputName)  '.kwx']);
-%             end
-            
-            %%% IAGO FINISHES WRITING HIS SPIKE SORTING STUFF IN HERE            
-            
-            
-            
-            
-            
+            writedat(shankData, strcat(spikeDir, '\',outputName,'\', outputName, ".dat")) 
+             
             if shankIdx == probe.ShankCount
                 fullTS(:, isnan(fullTS(1, :))) = [];
                 outputName = "rawTime.dat";
@@ -379,6 +315,7 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
     posPad = round(1/(tempData.scalars.RVn1.ts(2) - tempData.scalars.RVn1.ts(1)))*2;
     
     %Extract position and convert from pixels to cm
+
     %posMat = posMat; % .* cmPERpix;
     %eegFS = eeg.fs;
     
@@ -416,9 +353,9 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
         xposG = posMat(6, index1:index2);
         yposG = posMat(7, index1:index2);
         
+
         vel.v = velV(index1:index2);
         vel.ts = velTS(index1:index2);
-
         %If position tracking noise reduction is turned on, it should go
         %here.
 
@@ -435,7 +372,7 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
         
         xposG = interp1(epochPosTS, xposG, eegTS, 'spline');
         yposG = interp1(epochPosTS, yposG, eegTS, 'spline');
-        
+
         eeg.(char(epochNames(epochIdx))).redPos = [xposR; yposR];
         eeg.(char(epochNames(epochIdx))).greenPos = [xposG; yposG];
         eeg.(char(epochNames(epochIdx))).vel = [vel.v; vel.ts];

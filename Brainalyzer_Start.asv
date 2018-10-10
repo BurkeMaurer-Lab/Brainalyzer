@@ -115,6 +115,7 @@ end
 
 for ratIdx = 1:size(ratsToProcess, 2)
     toDir = [outDir, ratsToProcess(ratIdx).ID, '\'];
+    ratInfo = Brain_FetchRatInfo(toDir, ratsToProcess(ratIdx).ID);
     blocks = ratBlocks{ratIdx};
     
     for blockIdx = 1:size(blocks, 2)
@@ -138,14 +139,14 @@ end
 %----------------------------------------------------------%
 
 for ratIdx = 1:size(ratsToProcess, 2)
-    dataDir = [outdir, ratsToProcess(ratIdx).ID, '\'];
-    ratInfo = Brain_FetchRatInfo(dataDir, ratsToProcess(ratIdx).ID);
+    toDir = [outdir, ratsToProcess(ratIdx).ID, '\'];
+    ratInfo = Brain_FetchRatInfo(toDir, ratsToProcess(ratIdx).ID);
     blocks = ratBlocks{ratIdx};
     
     for blockIdx = 1:size(blocks, 2)
         curBlock = char(ratBlocks{ratIdx}(blockIdx));
-        
-        Brain_ProcessData(dataDir, curBlock);
+        delim_dash = strsplit(blockID, '-');
+        blockDir = [outDir, delim_dash{2}, '-', delim_dash{3}, '\'];
         
         if analysis > 1
             [wave, epochs] = Brain_PickWaveAndEpoch([toDir, curBlock, '\'], ratInfo);
@@ -160,7 +161,5 @@ for ratIdx = 1:size(ratsToProcess, 2)
             
             end
         end
-    end
-end
     
 fprintf('\n');
