@@ -12,9 +12,9 @@ close all;
 % directory, etc.                                          %
 %--------------------Editable Constants--------------------%
 %----------------------------------------------------------%
-inDirTev = 'C:\Users\HAL2\Desktop\Raw Data\';
+inDirTev = 'C:\Users\Iago Patino Lopez\Desktop\work\';
 inDirSev = 'E:\Raw Data\';
-outDir = 'C:\Users\HAL2\Desktop\Brainalyzer\Results\';
+outDir = 'C:\Users\Iago Patino Lopez\Desktop\work\out\';
 
 analysis = 1;
 %Choose analysis value from list below
@@ -83,19 +83,20 @@ while ratIdx < size(ratsToProcess, 2)
 %         Brain_FetchInfoToProcess(inDirT, inDirS, outDir, ratInfo, blocks);
         while blockIdx < size(blocks, 2)
             blockIdx = blockIdx + 1;
-            try
-                Brain_FetchInfoToProcess(inDirT, inDirS, outDir, ratInfo, blocks(blockIdx));
-            catch
-                cprintf('*err', '\n\nERROR:');
-                cprintf('*err', ['\nUnable to run function "Brain_FetchInfoToProcess" for block ' num2str(blocks(blockIdx)), ...
-                    ' of rat: ', num2str(ratsToProcess(ratIdx).ID),... 
-                    '\nContinuing to next block.\n']);
-                errRats = [errRats; [string(ratsToProcess(ratIdx).ID), string(blocks(blockIdx))]];
-                blocks(blockIdx) = [];
-                blockIdx = blockIdx - 1;
-                pause(3);
-                continue;
-            end
+            Brain_FetchInfoToProcess(inDirT, inDirS, outDir, ratInfo, blocks(blockIdx));
+%             try
+%                 Brain_FetchInfoToProcess(inDirT, inDirS, outDir, ratInfo, blocks(blockIdx));
+%             catch
+%                 cprintf('*err', '\n\nERROR:');
+%                 cprintf('*err', ['\nUnable to run function "Brain_FetchInfoToProcess" for block ' num2str(blocks(blockIdx)), ...
+%                     ' of rat: ', num2str(ratsToProcess(ratIdx).ID),... 
+%                     '\nContinuing to next block.\n']);
+%                 errRats = [errRats; [string(ratsToProcess(ratIdx).ID), string(blocks(blockIdx))]];
+%                 blocks(blockIdx) = [];
+%                 blockIdx = blockIdx - 1;
+%                 pause(3);
+%                 continue;
+%             end
         end
     elseif analysis > 1
         blocks = Brain_FetchBlocksToAnalyze(outDir, ratsToProcess(ratIdx).ID, analysis);
@@ -113,18 +114,18 @@ end
 %--------------------Editable Constants--------------------%
 %----------------------------------------------------------%
 
-for ratIdx = 1:size(ratsToProcess, 2)
-    toDir = [outDir, ratsToProcess(ratIdx).ID, '\'];
-    blocks = ratBlocks{ratIdx};
-    
-    for blockIdx = 1:size(blocks, 2)
-    %Iterate through rat's blocks
-        curBlock = char(ratBlocks{ratIdx}(blockIdx));
-        if analysis == 1
-            Brain_PreProcess(inDirTev, inDirSev, toDir, ratsToProcess(ratIdx).ID, curBlock);
-        end
-    end
-end
+% for ratIdx = 1:size(ratsToProcess, 2)
+%     toDir = [outDir, ratsToProcess(ratIdx).ID, '\'];
+%     blocks = ratBlocks{ratIdx};
+%     
+%     for blockIdx = 1:size(blocks, 2)
+%     %Iterate through rat's blocks
+%         curBlock = char(ratBlocks{ratIdx}(blockIdx));
+%         if analysis == 1
+%             Brain_PreProcess(inDirTev, inDirSev, toDir, ratsToProcess(ratIdx).ID, curBlock);
+%         end
+%     end
+% end
 
 %----------------------------------------------------------%
 %----------------------------------------------------------%
@@ -138,14 +139,14 @@ end
 %----------------------------------------------------------%
 
 for ratIdx = 1:size(ratsToProcess, 2)
-    dataDir = [outdir, ratsToProcess(ratIdx).ID, '\'];
+    dataDir = [outDir, ratsToProcess(ratIdx).ID, '\'];
     ratInfo = Brain_FetchRatInfo(dataDir, ratsToProcess(ratIdx).ID);
     blocks = ratBlocks{ratIdx};
     
     for blockIdx = 1:size(blocks, 2)
         curBlock = char(ratBlocks{ratIdx}(blockIdx));
         
-        Brain_ProcessData(dataDir, curBlock);
+        Brain_PostProcess(dataDir, curBlock);
         
         if analysis > 1
             [wave, epochs] = Brain_PickWaveAndEpoch([toDir, curBlock, '\'], ratInfo);
