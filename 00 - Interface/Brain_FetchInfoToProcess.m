@@ -5,7 +5,7 @@
 %NMD 10/9/18 We need to add in a functionality that will prompt the user
 %for input in the case of a missing epoch time stamp.
 
-function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, block)
+function Brain_FetchInfoToProcess(inDirMetaNPos, inDirEEG, outDir, ratInfo, block)
 
 %     blockID = char(block(blockIdx));
     blockID = char(block);
@@ -38,7 +38,11 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, block)
     end
 
     if analysisFlag
-        exp = Brain_parseText([inDirTev, blockID, '\Notes.txt'], ...
+        
+        holderData = [];
+        streamIDs = [];
+        
+        exp = Brain_parseText([inDirMetaNPos, 'Notes.txt'], ...
             'voi', 'all');
 
         printTitle(blockID);
@@ -50,24 +54,38 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, block)
 
         %  First, let's verify that all info from TDT matches what we expect from the template file
         % return an error if there is a mismatch
+        %Do a different method of verification depending on the file types.
+        for waveIdx = 1:size(ratInfo.wave, 2)
+            if strcmp(ratInfo.wave(waveIdx).Type, 'tev')
 
-        holderData = TDT2mat([inDirTev, blockID, '\'], 'T1', 1, 'T2', 2, 'VERBOSE', 0);
-        streamIDs = [];
+                holderData = TDT2mat_NMD(inDirMetaNPos, 'T1', 1, 'T2', 2, 'VERBOSE', 0);
+                holderData = holderData.streams;
 
-        for j = 1:size(ratInfo.wave, 2)
-            if strcmp(ratInfo.wave(j).Type, 'tev')
-                inputDir = [inDirTev, blockID, '\'];
-                ratInfo.wave(j).ID = validatestring(ratInfo.wave(j).ID, fieldnames(holderData.streams));
-                chans = str2num(strrep(ratInfo.wave(j).Channels, '-', ' '));
-                if size(holderData.streams.(ratInfo.wave(j).ID).data, 1) ~= (chans(2) - chans(1) + 1)
+                ratInfo.wave(waveIdx).ID = Brain_validateString(ratInfo.wave(waveIdx).ID, fieldnames(holderData));
+                chans = str2num(strrep(ratInfo.wave(waveIdx).Channels, '-', ' '));
+                if size(holderData.(ratInfo.wave(waveIdx).ID).data, 1) ~= (chans(2) - chans(1) + 1)
                     cprintf('*err', 'ERROR:\n');
                     cprintf('err', 'Waveform channel counts do not match up\n');
                 end
-                streamIDs = [streamIDs; ratInfo.wave(j).ID];
-            elseif strcmp(ratInfo.wave(j).Type, 'sev')
-                inputDir = [inDirSev, blockID, '\'];
-                contents = dir(inputDir);
+                
+            else %I'm assuming if this else statement catches then the data is in a SEV file format
+                %NMD 10/11/2018 I don't like this method but it's only temporary to
+                %get some quick data.
+                %Channel one should have the same meta data as the rest
+                tempHolderData = SEV2mat(inDirEEG, 'verbose', 0, 'channel', 0, 't1', 1, 't2', 2);
+                %NMD Does the SEV stream name need to be a user input? I'm
+                %pretty sure that it doesn't change for any SEV files.
+                tempHolderData = tempHolderData.RSn1;
+                %NMD: Hey Dylan, I don't know how to do this in a non-dirty way
+                %right now and
+                %need quick way to start getting data. I'm gonna pass the
+                %buck to you. Sorry. I owe you.
+                numChans = size(tempHolderData.channels, 2);
+                chanStart = (waveIdx - 1) * numChans / 2 + 1;
+                tempHolderData.data = tempHolderData.data(chanStart:(chanStart + (numChans / 2) - 1), :);
+                holderData.(ratInfo.wave(waveIdx).ID) = tempHolderData;
             end
+            streamIDs = [streamIDs; ratInfo.wave(waveIdx).ID];
         end
 
         notes = fopen([txtDir, 'Notes.txt'], 'wt');
@@ -88,9 +106,9 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, block)
         fprintf(notes, ['\tTotal_Time: ', timeTot, '\n']);
 
         fprintf(notes, ['\n\tTotal_Epochs: ', num2str(size(exp.EpochStart, 2)), '\n']);
-        for j = 1:size(exp.EpochStart, 2)
-            fprintf(notes, ['\t\tEpoch', sprintf('%02d', j), '_Start- ', exp.EpochStart{j}, '\n']);
-            fprintf(notes, ['\t\tEpoch', sprintf('%02d', j), '_End- ', exp.EpochEnd{j}, '\n\n']);
+        for waveIdx = 1:size(exp.EpochStart, 2)
+            fprintf(notes, ['\t\tEpoch', sprintf('%02d', waveIdx), '_Start- ', exp.EpochStart{waveIdx}, '\n']);
+            fprintf(notes, ['\t\tEpoch', sprintf('%02d', waveIdx), '_End- ', exp.EpochEnd{waveIdx}, '\n\n']);
         end
 
         %if exist([inDirSev, blockID], 'dir')
@@ -118,8 +136,8 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, block)
                 cprintf('-text', [streamIDs(k, :), '\n']);
                 xx = find(strcmp(streamIDs(k, :), {ratInfo.wave(:).ID}));
                 cprintf('text', ['\tName: ', ratInfo.wave(xx).Name, '\n']);
-                cprintf('text', ['\tChannels: ', num2str(size(holderData.streams.(streamIDs(k, :)).data, 1)), '\n']);
-                cprintf('text', ['\tFrequency: ', num2str(holderData.streams.(streamIDs(k, :)).fs), ' Hz\n\n']);
+                cprintf('text', ['\tChannels: ', num2str(size(holderData.(streamIDs(k, :)).data, 1)), '\n']);
+                cprintf('text', ['\tFrequency: ', num2str(holderData.(streamIDs(k, :)).fs), ' Hz\n\n']);
 
                 userPrompt = 'Would you like to process this waveform?\n';
                 validatedAnsr = Brain_validateString(userPrompt, {'yes', 'no'});
@@ -164,23 +182,25 @@ function Brain_FetchInfoToProcess(inDirTev, inDirSev, outDir, ratInfo, block)
                     %with the data not lining up with time stamps. This new function
                     %will use the input from the user and find the
                     %closeset possible sampling frequency.
-                    fprintf(notes, ['\n\t\tRecord_Frequency: ', num2str(holderData.streams.(streamIDs(k, :)).fs), ' Hz\n']);
+                    fprintf(notes, ['\n\t\tRecord_Frequency: ', num2str(holderData.(streamIDs(k, :)).fs), ' Hz\n']);
 
-                    user_downFreq = getUserDownFreq(holderData.streams.(streamIDs(k, :)).fs);
+                    user_downFreq = getUserDownFreq(holderData.(streamIDs(k, :)).fs);
 
                     fprintf(notes, ['\t\tSaved_Frequency: ', num2str(user_downFreq), ' Hz\n']);
 
-                    fprintf(notes, ['\t\tChannels: 1-', num2str(size(holderData.streams.(streamIDs(k, :)).data, 1)), '\n']);
+                    fprintf(notes, ['\t\tChannels: 1-', num2str(size(holderData.(streamIDs(k, :)).data, 1)), '\n']);
 
                     ansr = input('Enter bad channels for this waveform\n', 's');
                     user_badCh = '';
                     if isempty(ansr)
                         user_badCh = '-';
                     else
+                        %NMD 10/11/2018 I think this needs to require less
+                        %specificity in the deliminator.
                         bad = str2num(ansr);
                         user_badCh = strcat(user_badCh, num2str(bad(1)));
-                        for j = 2:length(bad)
-                            user_badCh = strcat(user_badCh, [', ', num2str(bad(j))]);
+                        for waveIdx = 2:length(bad)
+                            user_badCh = strcat(user_badCh, [', ', num2str(bad(waveIdx))]);
                         end
                     end
 

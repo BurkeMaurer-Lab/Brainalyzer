@@ -12,9 +12,10 @@ close all;
 % directory, etc.                                          %
 %--------------------Editable Constants--------------------%
 %----------------------------------------------------------%
-inDirTev = 'C:\Users\Iago Patino Lopez\Desktop\work\';
-inDirSev = 'E:\Raw Data\';
-outDir = 'C:\Users\Iago Patino Lopez\Desktop\work\out\';
+
+inDirMetaNPos = 'D:\CA1-CA3_Age\Raw_Tracking_Data\'; %The location of the position tracking and meta data. Typically, where the TDT files are stored. 
+inDirEEG = 'D:\CA1-CA3_Age\Raw_EEG_Data\'; %Where the EEG data is stored. If the data isn't stored as SEV files it will be the same as posNmetaDataDir.
+outDir = 'D:\CA1-CA3_Age\Converted_Data\'; %Where the data will be stored.
 
 analysis = 1;
 %Choose analysis value from list below
@@ -29,7 +30,7 @@ analysis = 1;
 %----------------------------------------------------------%
 
 if analysis == 1
-    ratsToProcess = Interface_ReturnRatsToProcess(inDirTev);
+    ratsToProcess = Interface_ReturnRatsToProcess(inDirMetaNPos);
     %ratPoss = dir(inDirTev);
 else
     ratsToProcess = Interface_ReturnRatsToProcess(outDir);
@@ -58,17 +59,32 @@ while ratIdx < size(ratsToProcess, 2)
     blockIdx = 0;
         
     if analysis == 1
+        %Make sure output directory exists.
+        %If it doesn't exist throw an error
         toDir = [outDir, ratsToProcess(ratIdx).ID, '\'];
+        if ~mkdir(toDir)
+            cprintf('*err', ['\nERROR:\nUnable to create output directory:\n\t', ...
+                toDir, '\nContinuing to next rat.']);
+            errRats = [errRats [string(ratsToProcess(ratIdx).ID), "all blocks"]];
+            ratsToProcess(ratIdx) = [];
+            ratBlocks(ratIdx) = [];
+            ratIdx = ratIdx - 1;
+            pause(3);
+            continue;
+        end
+        %Make sure template file exists. If not, create one.
+        if ~exist([toDir, 'Template.txt'], 'file')
+            mkTemplate(toDir, inDirMetaNPos);
+        end
         ratInfo = Brain_FetchRatInfo(toDir, ratsToProcess(ratIdx).ID);
         
-        inDirT = [inDirTev, ratsToProcess(ratIdx).ID, '\'];
-        inDirS = [inDirSev, ratsToProcess(ratIdx).ID, '\'];
+        curRatInDirMeta = [inDirMetaNPos, ratsToProcess(ratIdx).ID, '\'];
+        curRatInDirEEG = [inDirEEG, ratsToProcess(ratIdx).ID, '\'];
                 
 %       blocks = Brain_FetchBlocksToProcess(inDirT, ratsToProcess(ratIdx).ID);
         try
-            blocks = Brain_FetchBlocksToProcess(inDirT, ratsToProcess(ratIdx).ID);
+            blocks = Brain_FetchBlocksToProcess(curRatInDirMeta, ratsToProcess(ratIdx).ID);
         catch 
-            
             cprintf('*err', '\n\nERROR:');
             cprintf('*err', ['\nUnable to run function "Brain_FetchBlocksToProcess" for rat: ', num2str(ratsToProcess(ratIdx).ID),... 
                 '\nContinuing to next rat.']);
@@ -83,9 +99,19 @@ while ratIdx < size(ratsToProcess, 2)
 %         Brain_FetchInfoToProcess(inDirT, inDirS, outDir, ratInfo, blocks);
         while blockIdx < size(blocks, 2)
             blockIdx = blockIdx + 1;
-            Brain_FetchInfoToProcess(inDirT, inDirS, outDir, ratInfo, blocks(blockIdx));
+
+            %These try-catch statements needs to be more specific about the
+            %errors. If it's a matlab error we should display that error,
+            %but if it's one of our error statements we should return that.
+            curBlockInDirMeta = [curRatInDirMeta, char(blocks(blockIdx)), '\'];
+            curBlockInDirEEG = [curRatInDirEEG, char(blocks(blockIdx)), '\'];
+            Brain_FetchInfoToProcess(curBlockInDirMeta, curBlockInDirEEG, outDir, ratInfo, blocks(blockIdx));
 %             try
-%                 Brain_FetchInfoToProcess(inDirT, inDirS, outDir, ratInfo, blocks(blockIdx));
+%                 %NMD 10/11/18 I need to figure out to modify info
+%                 %collection for both SEV and TDT files. This will be
+%                 %temporary.
+%                 Brain_FetchInfoToProcess(curInDirMeta, curInDirEEG, outDir, ratInfo, blocks(blockIdx));
+% %                 Brain_FetchInfoToProcess(curInDirMeta, outDir, ratInfo, blocks(blockIdx));
 %             catch
 %                 cprintf('*err', '\n\nERROR:');
 %                 cprintf('*err', ['\nUnable to run function "Brain_FetchInfoToProcess" for block ' num2str(blocks(blockIdx)), ...
@@ -114,18 +140,19 @@ end
 %--------------------Editable Constants--------------------%
 %----------------------------------------------------------%
 
-% for ratIdx = 1:size(ratsToProcess, 2)
-%     toDir = [outDir, ratsToProcess(ratIdx).ID, '\'];
-%     blocks = ratBlocks{ratIdx};
-%     
-%     for blockIdx = 1:size(blocks, 2)
-%     %Iterate through rat's blocks
-%         curBlock = char(ratBlocks{ratIdx}(blockIdx));
-%         if analysis == 1
-%             Brain_PreProcess(inDirTev, inDirSev, toDir, ratsToProcess(ratIdx).ID, curBlock);
-%         end
-%     end
-% end
+for ratIdx = 1:size(ratsToProcess, 2)
+    toDir = [outDir, ratsToProcess(ratIdx).ID, '\'];
+    blocks = ratBlocks{ratIdx};
+    
+    for blockIdx = 1:size(blocks, 2)
+    %Iterate through rat's blocks
+        curBlock = char(ratBlocks{ratIdx}(blockIdx));
+        if analysis == 1
+            Brain_PreProcess(inDirMetaNPos, inDirEEG, toDir, ratsToProcess(ratIdx).ID, curBlock);
+        end
+    end
+end
+
 
 %----------------------------------------------------------%
 %----------------------------------------------------------%
@@ -145,7 +172,6 @@ for ratIdx = 1:size(ratsToProcess, 2)
     
     for blockIdx = 1:size(blocks, 2)
         curBlock = char(ratBlocks{ratIdx}(blockIdx));
-        
         Brain_PostProcess(dataDir, curBlock);
         
         if analysis > 1
@@ -164,4 +190,6 @@ for ratIdx = 1:size(ratsToProcess, 2)
     end
 end
     
+clear;
+
 fprintf('\n');

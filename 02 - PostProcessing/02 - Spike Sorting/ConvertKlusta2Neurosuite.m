@@ -76,7 +76,7 @@ function ConvertKlusta2Neurosuite(basepath,basename)
     for j=1:length(spktimes) %For every spike
         try
             w = dat.data((uint64(spktimes(j))-sbefore).*totalch+1:(uint64(spktimes(j))+safter).*totalch);
-            %w = dat.data(4:9);
+            %w = dat.data((double(spktimes(j))-16).*11+1:(double(spktimes(j))+16).*11);
             wvforms=reshape(w,totalch,[]); %Reshapae w into an array with 11 rows
             %select needed channels
             wvforms = wvforms(channellist,:);
@@ -112,6 +112,8 @@ function ConvertKlusta2Neurosuite(basepath,basename)
     %mean activity per spike
     fetmeans = mean(fets,1);
     %find first pcs, make means of those...
+    %NMD 10/21/18 This needs to change to a dynamic variable. Shouldn't be
+    %hard-coded
     featuresperspike = 3;
     firstpcslist = 1:featuresperspike:size(fets,1);
     firstpcmeans = mean(fets(firstpcslist,:),1);

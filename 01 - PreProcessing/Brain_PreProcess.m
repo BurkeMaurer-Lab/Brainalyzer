@@ -1,4 +1,4 @@
-function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
+function Brain_PreProcess(inDirMeta, inDirEEG, outDir, ratNum, blockID)
     % Testing testing: 1, 2, and even 3
     clc; 
 
@@ -10,11 +10,11 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
     
     % -inputDir4TDT
     %    *Directory where raw TDT files are stored (.tev)
-    inputDirT = [inDirTev, ratNum, '\', blockID, '\'];
+    inputDirMeta = [inDirMeta, ratNum, '\', blockID, '\'];
     
     % -inputDir4RSV
     %    *Directory where raw RS4 files are stored (.sev)
-    inputDirS = [inDirSev, blockID, '\'];
+    inputDirEEG = [inDirEEG, ratNum, '\', blockID, '\'];
     
     % -blockDir
     %    *Output directory for all files associated with this block
@@ -47,7 +47,7 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
         end
     end
     numWaves = size(wavesBlock.wave, 2);
-    dataInfo = TDT2mat_NMD(inputDirT, 'T1', 1, 'T2', 1.05, 'STORE', {wavesBlock.wave(1).waveID}, 'VERBOSE', 0);
+    dataInfo = TDT2mat_NMD(inputDirMeta, 'T1', 1, 'T2', 1.05, 'STORE', {wavesBlock.wave(1).waveID}, 'VERBOSE', 0);
     
     totalTime = str2double(dataInfo.info.duration(4:5))*60 ...
         + str2double(dataInfo.info.duration(1:2))*60*60 ...
@@ -63,14 +63,14 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
         if strcmp(wavesBlock.wave(waveIdx).Process, 'Yes')
             %Clear eeg for each new block
             eeg = [];
-            if strcmp(wavesBlock.wave(waveIdx).Type, 'tev')
-                inDir = inputDirT;
-            elseif strcmp(wavesBlock.wave(waveIdx).Type, 'sev')
-                inDir = inputDirS;
-            end
             
             %Extract the eeg data for both spikesorting and epochs
-            eeg.(wavesBlock.wave(waveIdx).Name) = Brain_LoadWaveform(inDir, blockDir, blockID, wavesBlock.wave(waveIdx), timeVector, totalTime);
+            %NMD 10/10/2018 This is super dirty but I don't have time to
+            %control for SEV file formats so I'm just going to add 64 to
+            %all of the channels for wave 2 for a data check in tomorrow.
+            %Yell at me if this is still here at commit time.
+%             eeg.(wavesBlock.wave(waveIdx).Name) = Brain_LoadWaveform(inputDirMeta, inputDirEEG, blockDir, blockID, wavesBlock.wave(waveIdx), timeVector, totalTime);
+            eeg.(wavesBlock.wave(waveIdx).Name) = Brain_LoadWaveform(inputDirEEG, blockDir, blockID, wavesBlock.wave(waveIdx), waveIdx, timeVector, totalTime);
 %             try eeg.(wavesBlock.wave(waveIdx).Name) = Brain_LoadWaveform(inDir, blockDir, blockID, wavesBlock.wave(waveIdx), timeVector, totalTime);
 %             catch
 %                 cprintf('err', '\n\nSkipping block because of error in loading the eeg data.');
@@ -81,7 +81,7 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
 %             eeg.(wavesBlock.wave(waveIdx).Name) = Brain_NoiseReduction(eeg.(wavesBlock.wave(waveIdx).Name), wavesBlock.wave(waveIdx), timeVector);
             
             %Load the position data (commented for now until next push)
-            eeg = Brain_LoadPosition(inputDirT, eeg.(wavesBlock.wave(waveIdx).Name), totalTime, timeVector);
+            eeg = Brain_LoadPosition(inputDirMeta, eeg.(wavesBlock.wave(waveIdx).Name), totalTime, timeVector);
 %             try eeg.(wavesBlock.wave(waveIdx).Name) = Brain_LoadPosition(inputDirT, eeg.(wavesBlock.wave(waveIdx).Name), wavesBlock.wave(waveIdx), timeVector);
 %             catch
 %                 cprintf('err', '\n\nSkipping position extraction because of error in function');
@@ -99,10 +99,9 @@ function Brain_PreProcess(inDirTev, inDirSev, outDir, ratNum, blockID)
     end       
 end
 
-function eeg = Brain_LoadWaveform(inDir, outDir, blockID, wave, timeVector, totalTime)
+function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, timeVector, totalTime)
 
-    waveInfo = TDT2mat_NMD(inDir, 'T1', 1, 'T2', 1.05, 'STORE', {wave.waveID}, 'VERBOSE', 0);
-    fs = waveInfo.streams.(wave.waveID).fs;
+    fs = wave.RecoFreq;
     eeg = [];
     msg = [];
     eeg.fs = wave.SaveFreq;
@@ -153,9 +152,10 @@ function eeg = Brain_LoadWaveform(inDir, outDir, blockID, wave, timeVector, tota
 
         %%Load all channels from shank at recoding frequency
         for siteIdx = 1:numSites
+                        
             %check memory usage and ask the user to close programs that are
             %using unnecessary memory if you're below 1 Gbytes of usable
-            %RAM
+            %RAM            
             while 1
                 [~, sysMem] = memory;
                 availMem = sysMem.PhysicalMemory.Available; %Bytes
@@ -169,20 +169,26 @@ function eeg = Brain_LoadWaveform(inDir, outDir, blockID, wave, timeVector, tota
                 end
             end
             bigChanIdx = bigChanIdx + 1;
-            ch = probe.Shank(shankIdx).Site(siteIdx).Number;
-            cprintf('text', ['\nLoading channel ', sprintf('%02d', ch), ':    0.0%% Complete']);  
+            chan = probe.Shank(shankIdx).Site(siteIdx).Number;
+            cprintf('text', ['\nLoading channel ', sprintf('%02d', chan), ':    0.0%% Complete']);  
             %tStart = tic;
 
             %To not time chunk data
             if strcmp(wave.Type, 'tev')
-                tempData = TDT2mat_NMD(inDir, 'TYPE', {'streams'}, ...
+                tempData = TDT2mat_NMD(inDirEEG, 'TYPE', {'streams'}, ...
                         'STORE', {wave.waveID}, ...
-                        'CHANNEL', ch, ...
+                        'CHANNEL', chan, ...
                         'T1', 0, 'T2', 0, 'VERBOSE', 0);
                 tempData = tempData.streams.(wave.waveID).data;
             elseif strcmp(wave.Type, 'sev')
-                tempData = SEV2mat(inDir, 'verbose', 0, 'CHANNEL', chan);
-                tempData = tempData.(wave.waveID).data;
+                %This is temporary until I can get a cleaner way to use
+                %both sev and tdt files.
+                tempData = SEV2mat(inDirEEG, 'verbose', 0, 'CHANNEL', (chan + (waveIdx - 1) * 64));
+%                 tempData = SEV2mat(inDirEEG, 'verbose', 0, 'CHANNEL', chan);
+                %This step is temporary because the waveID's won't match
+                %for TDT and SEV files.
+%                 tempData = tempData.(wave.waveID).data;
+                tempData = tempData.RSn1.data;
             else
                 errorMsg = ['\nNo data extraction library is available for wave type: ', wave.Type];
                 error(errorMsg);
@@ -215,6 +221,8 @@ function eeg = Brain_LoadWaveform(inDir, outDir, blockID, wave, timeVector, tota
                     eeg.(char(epochNames(epochIdx))).ts = epochTS(idx1:idx2); 
                 end
             end
+            
+            tempData = [];
         end
         
         %Cut and save spike-sort data if required
@@ -256,8 +264,9 @@ function eeg = Brain_LoadWaveform(inDir, outDir, blockID, wave, timeVector, tota
              
             if shankIdx == probe.ShankCount
                 fullTS(:, isnan(fullTS(1, :))) = [];
-                outputName = "rawTime.dat";
-                writedat(fullTS, strcat(spikeDir, '\', outputName));
+                outputName = "rawTime.mat";
+                save(strcat(spikeDir, '\', outputName), 'fullTS', '-v7.3')
+%                 writedat(fullTS, strcat(spikeDir, '\', outputName));
             end
         end
     end %shank indexing
@@ -378,10 +387,11 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
         eeg.(char(epochNames(epochIdx))).greenPos = [xposG; yposG];
         eeg.(char(epochNames(epochIdx))).vel = [vel.v; vel.ts];
         
-        eeg.(char(epochNames(epochIdx))).raw.redPos = [posMat(3, :); posMat(4, :)];
-        eeg.(char(epochNames(epochIdx))).raw.greenPos = [posMat(6, :); posMat(7, :)];
-        eeg.(char(epochNames(epochIdx))).raw.velV = velV;
-        eeg.(char(epochNames(epochIdx))).raw.velTS = velTS;
+        eeg.(char(epochNames(epochIdx))).raw.redPos = [posMat(3, index1:index2); posMat(4, index1:index2)];
+        eeg.(char(epochNames(epochIdx))).raw.greenPos = [posMat(6, index1:index2); posMat(7, index1:index2)];
+        eeg.(char(epochNames(epochIdx))).raw.posTS = epochPosTS(index1:index2);
+        eeg.(char(epochNames(epochIdx))).raw.velV = velV(index1:index2);
+        eeg.(char(epochNames(epochIdx))).raw.velTS = velTS(index1:index2);
 
     end
     

@@ -1,6 +1,8 @@
 function numGood = Brain_CreateGeomFile(outDir, badChannels, prbType, mapType, shank_number)
     %Remember that this version of the code deals with a specific shank
     %only. 
+    
+    geomChanStart = 0;
  
     availablePrbs = {'Cam_eSeries64', 'Cam_fSeries64'};
     availableMaps = {'Linear', 'UShaped', 'General'};
@@ -43,12 +45,12 @@ function numGood = Brain_CreateGeomFile(outDir, badChannels, prbType, mapType, s
     fprintf(prbFile, '\t\t\t''channels'': [');
     for l=1:length(currShank.Site)-1
         if ismember(currShank.Site(l).ID, badIDs)==0 %If the channel is a good channel
-            fprintf(prbFile, '%d, ', currShank.Site(l).ID);
+            if geomChanStart; fprintf(prbFile, ', '); end
+            fprintf(prbFile, '%d', currShank.Site(l).ID);
+            if ~geomChanStart; geomChanStart = 1; end
         end
     end
-    if ismember(currShank.Site(length(currShank.Site)).ID, badIDs)==0 %If the channel is a good channel
-        fprintf(prbFile, '%d]', currShank.Site(length(currShank.Site)).ID);
-    end
+    fprintf(prbFile, ']');
     fprintf(prbFile, ',\n\n');
     fprintf(prbFile, '\t\t\t# Adjacency graph. Dead channels will be automatically discarded\n');
     fprintf(prbFile, '\t\t\t# by considering the corresponding subgraph.\n');
