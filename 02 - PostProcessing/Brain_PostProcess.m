@@ -1,3 +1,7 @@
+%NMD 10/12/18 Future Development: We need to figure out how to specify
+%shanks we want to run, or else shanks we don't want to run, so that we
+%don't have to run spike sorting on shanks that are a waste of time.
+
 %Brain_PostProcess
 %This function takes the data previously collected in the pre-process step
 %and performs operations on them. Currently, the biggest functionality is
@@ -30,8 +34,11 @@ function Brain_PostProcess(dataDir, blockID)
     %Iterate through waves
     for waveIdx = 1:numWaves
         curWave = wavesBlock.wave(waveIdx);
+        %%%%%%%%%%
+        if waveIdx == 1; continue; end
+        %%%%%%%%%%%%%%%%%%%%%
         if strcmp(curWave.Sort, 'Yes')
-            Brain_SpikeSorter(dataDir, curWave);
+            Brain_SpikeSorter(blockDir, curWave);
         end
     end
     fprintf('\n')
@@ -62,7 +69,11 @@ function Brain_SpikeSorter(dataDir, wave)
     
     fs = wave.RecoFreq;
     
-    for shankIdx = 1:probe.ShankCount
+    for shankIdx = 1:probe.ShankCount      
+        %%%%%%%%%%%%%%%%%%%%%
+        if shankIdx == 1; continue; end
+        %%%%%%%%%%%%%%%%%%%%%%%
+        
         clc;
         startChan = probe.Shank(shankIdx).Site(1).Number;
         endChan = probe.Shank(shankIdx).Site(end).Number;

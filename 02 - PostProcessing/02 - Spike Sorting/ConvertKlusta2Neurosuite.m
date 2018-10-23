@@ -35,10 +35,10 @@ function ConvertKlusta2Neurosuite(basepath,basename)
     clu = h5read(char(tkwik),'/channel_groups/0/spikes/clusters/main');
     cluster_names = unique(clu);
 
-    totalch = h5readatt(char(tkwik),'/application_data/spikedetekt','n_channels');
-    sbefore = h5readatt(char(tkwik),'/application_data/spikedetekt','extract_s_before');
-    safter = h5readatt(char(tkwik),'/application_data/spikedetekt','extract_s_after');
-    channellist = h5readatt(char(tkwik),'/channel_groups/0','channel_order')+1;
+    totalch = uint64(h5readatt(char(tkwik),'/application_data/spikedetekt','n_channels'));
+    sbefore = uint64(h5readatt(char(tkwik),'/application_data/spikedetekt','extract_s_before'));
+    safter = uint64(h5readatt(char(tkwik),'/application_data/spikedetekt','extract_s_after'));
+    channellist = uint64(h5readatt(char(tkwik),'/channel_groups/0','channel_order')+1);
 
     %% Getting spiketimes
     spktimes = h5read(char(tkwik),'/channel_groups/0/spikes/time_samples');
@@ -75,7 +75,7 @@ function ConvertKlusta2Neurosuite(basepath,basename)
     wvpowers = zeros(1,length(spktimes)); %Vector with 248662spikes
     for j=1:length(spktimes) %For every spike
         try
-            w = dat.data((double(spktimes(j))-sbefore).*totalch+1:(double(spktimes(j))+safter).*totalch);
+            w = dat.data((uint64(spktimes(j))-sbefore).*totalch+1:(uint64(spktimes(j))+safter).*totalch);
             %w = dat.data((double(spktimes(j))-16).*11+1:(double(spktimes(j))+16).*11);
             wvforms=reshape(w,totalch,[]); %Reshapae w into an array with 11 rows
             %select needed channels
@@ -112,6 +112,8 @@ function ConvertKlusta2Neurosuite(basepath,basename)
     %mean activity per spike
     fetmeans = mean(fets,1);
     %find first pcs, make means of those...
+    %NMD 10/21/18 This needs to change to a dynamic variable. Shouldn't be
+    %hard-coded
     featuresperspike = 3;
     firstpcslist = 1:featuresperspike:size(fets,1);
     firstpcmeans = mean(fets(firstpcslist,:),1);
