@@ -12,6 +12,7 @@ close all;
 % directory, etc.                                          %
 %--------------------Editable Constants--------------------%
 %----------------------------------------------------------%
+
 inDirMetaNPos = 'D:\CA1-CA3_Age\Raw_Tracking_Data\'; %The location of the position tracking and meta data. Typically, where the TDT files are stored. 
 inDirEEG = 'D:\CA1-CA3_Age\Raw_EEG_Data\'; %Where the EEG data is stored. If the data isn't stored as SEV files it will be the same as posNmetaDataDir.
 outDir = 'D:\CA1-CA3_Age\Converted_Data\'; %Where the data will be stored.
@@ -98,6 +99,7 @@ while ratIdx < size(ratsToProcess, 2)
 %         Brain_FetchInfoToProcess(inDirT, inDirS, outDir, ratInfo, blocks);
         while blockIdx < size(blocks, 2)
             blockIdx = blockIdx + 1;
+
             %These try-catch statements needs to be more specific about the
             %errors. If it's a matlab error we should display that error,
             %but if it's one of our error statements we should return that.
@@ -150,6 +152,7 @@ for ratIdx = 1:size(ratsToProcess, 2)
         end
     end
 end
+
 
 %----------------------------------------------------------%
 %----------------------------------------------------------%
