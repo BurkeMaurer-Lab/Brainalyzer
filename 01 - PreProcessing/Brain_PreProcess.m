@@ -1,25 +1,25 @@
-function Brain_PreProcess(inDirMeta, inDirEEG, outDir, ratNum, blockID)
+function Brain_PreProcess(inputDirMeta, inputDirEEG, blockDir, blockID)
     % Testing testing: 1, 2, and even 3
     clc; 
 
     blockID = char(blockID);
-    %Necessary Constants
-    % -cmPERpix
-    %    *Centimeter's per pixel count. Necessary for velocity and
-    %    acceleration data
-    
-    % -inputDir4TDT
-    %    *Directory where raw TDT files are stored (.tev)
-    inputDirMeta = [inDirMeta, ratNum, '\', blockID, '\'];
-    
-    % -inputDir4RSV
-    %    *Directory where raw RS4 files are stored (.sev)
-    inputDirEEG = [inDirEEG, ratNum, '\', blockID, '\'];
-    
-    % -blockDir
-    %    *Output directory for all files associated with this block
-    delim_dash = strsplit(blockID, '-');
-    blockDir = [outDir, delim_dash{2}, '-', delim_dash{3}, '\'];
+%     %Necessary Constants
+%     % -cmPERpix
+%     %    *Centimeter's per pixel count. Necessary for velocity and
+%     %    acceleration data
+%     
+%     % -inputDir4TDT'
+%     %    *Directory where raw TDT files are stored (.tev)
+%     inputDirMeta = [inDirMeta, ratNum, '\', blockID, '\'];
+%     
+%     % -inputDir4RSV
+%     %    *Directory where raw RS4 files are stored (.sev)
+%     inputDirEEG = [inDirEEG, ratNum, '\', blockID, '\'];
+%     
+%     % -blockDir
+%     %    *Output directory for all files associated with this block
+%     delim_dash = strsplit(blockID, '-');
+%     blockDir = [outDir, delim_dash{2}, '-', delim_dash{3}, '\'];
     
     % -outputDir
     %    *Output directory where all files associated with this function
@@ -42,7 +42,7 @@ function Brain_PreProcess(inDirMeta, inDirEEG, outDir, ratNum, blockID)
             timeVector = Brain_parseText(notesDir, 'ver', 'Brain', 'voi', 'epochTimes');
         catch
             cprintf('*err', '\n\nERROR READING NOTES FILE. NOT ANALYZING BLOCK\n');
-            pause(3);
+            pause(5);
             return;
         end
     end
@@ -70,7 +70,8 @@ function Brain_PreProcess(inDirMeta, inDirEEG, outDir, ratNum, blockID)
             %all of the channels for wave 2 for a data check in tomorrow.
             %Yell at me if this is still here at commit time.
 %             eeg.(wavesBlock.wave(waveIdx).Name) = Brain_LoadWaveform(inputDirMeta, inputDirEEG, blockDir, blockID, wavesBlock.wave(waveIdx), timeVector, totalTime);
-            eeg.(wavesBlock.wave(waveIdx).Name) = Brain_LoadWaveform(inputDirEEG, blockDir, blockID, wavesBlock.wave(waveIdx), waveIdx, timeVector, totalTime);
+            eeg.(wavesBlock.wave(waveIdx).Name) = Brain_LoadWaveform(inputDirEEG, blockDir, blockID, wavesBlock.wave(waveIdx), waveIdx, timeVector);
+            
 %             try eeg.(wavesBlock.wave(waveIdx).Name) = Brain_LoadWaveform(inDir, blockDir, blockID, wavesBlock.wave(waveIdx), timeVector, totalTime);
 %             catch
 %                 cprintf('err', '\n\nSkipping block because of error in loading the eeg data.');
@@ -97,9 +98,27 @@ function Brain_PreProcess(inDirMeta, inDirEEG, outDir, ratNum, blockID)
             pause(3);
         end
     end       
+    %NMD 2/23/19 This was moved from Brain_PostProcess. Right now the user
+    %has to specify that they want to delete the raw data in the first
+    %wave. This is obviously not ideal and is just a dirty workaround until
+    %a better system is implimented. 
+    %If user specified, delete raw data to save space on drive.
+    curWave = wavesBlock.wave(1);
+    if strcmp(curWave.DelRaw, 'Yes')
+        clc;
+        fprintf('\n\n!!!!!!!!!!!!!!!!!!!!!!!');
+        fprintf('\nDELETING RAW META AND POSITION DATA IN 20 SECONDS!!!\n\n\n');
+        pause(20);
+        try rmdir(inputDirMeta); catch; end
+        clc;
+        fprintf('\n\n!!!!!!!!!!!!!!!!!!!!!!!');
+        fprintf('\nDELETING RAW EEG DATA IN 20 SECONDS!!!\n\n\n');
+        pause(20);
+        try rmdir(inputDirEEG); catch; end
+    end
 end
 
-function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, timeVector, totalTime)
+function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, timeVector)
 
     fs = wave.RecoFreq;
     eeg = [];
@@ -136,7 +155,8 @@ function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, time
     nChan = probe.NChan;
     clear temp;
     
-    for shankIdx = 1:probe.ShankCount
+    for shankIdx = 1:probe.ShankCount        
+               
         clc;
         cprintf('-blue', ['Block: ', blockID, '\nWave: ', char(wave.Name), '\nShank: ', char(num2str(shankIdx)), '\nPre-Processing\n\n']);
         %cprintf('text', 'Loading waveform complete\nLoading position data\n');
@@ -194,7 +214,8 @@ function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, time
                 error(errorMsg);
             end
             
-            if isempty(fullTS); fullTS = (0:1/fs:((1/fs)*(size(tempData, 2)-1))); end
+%             if isempty(fullTS); fullTS = (0:1/fs:((1/fs)*(size(tempData, 2)-1))); end
+            if isempty(fullTS); fullTS = [0:(size(tempData, 2) - 1)] ./ fs; end
             
             %Store spike data
             if strcmp(wave.Sort, 'Yes')
@@ -227,27 +248,35 @@ function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, time
         
         %Cut and save spike-sort data if required
         if strcmp(wave.Sort, 'Yes')            
-            for epchs = 1:(numEpochs + 1)
-                if epchs == 1
-                    index1 = 1;
-                    %index2 = fs * timeVector(epchs, 1);
-                    index2 = find(fullTS <= timeVector(epchs, 1), 1, 'last') - 1;    %timeVector(epchs, 1) * eeg.fs;
-                elseif epchs == size(timeVector, 1)+1
-                    %index1 = fs * timeVector(epchs-1, 2);
-                    %index2 = size(eegTemp, 2) * fs;
-                    index1 = find(fullTS >= timeVector(epchs-1, 2), 1, 'first'); %timeVector(epchs-1, 2) * eeg.fs;
-                    index2 = size(fullTS, 2);
-                else
-                    %index1 = fs * timeVector(epchs-1, 2);
-                    %index2 = fs * timeVector(epchs, 1);
-                    index1 = find(fullTS >= timeVector(epchs-1, 2), 1, 'first'); %timeVector(epchs-1, 2) * eeg.fs;
-                    index2 = find(fullTS <= timeVector(epchs, 1), 1, 'last') - 1;    %timeVector(epchs, 1) * eeg.fs;     
-                end
-
-                shankData(:, index1:index2) = NaN;
-                fullTS(:, index1:index2) = NaN;
-            end
-            shankData(:, isnan(shankData(1, :))) = [];
+            %NMD 11/15/18 No longer cutting out the periods between epochs.
+            %It makes cluster cutting much more difficult because there are
+            %clear separations between the epochs and it makes the data
+            %disjointed.
+%             for epchs = 1:(numEpochs + 1)
+%                 if epchs == 1
+%                     index1 = 1;
+%                     %index2 = fs * timeVector(epchs, 1);
+%                     index2 = find(fullTS <= timeVector(epchs, 1), 1, 'last') - 1;    %timeVector(epchs, 1) * eeg.fs;
+%                 elseif epchs == size(timeVector, 1)+1
+%                     %index1 = fs * timeVector(epchs-1, 2);
+%                     %index2 = size(eegTemp, 2) * fs;
+%                     index1 = find(fullTS >= timeVector(epchs-1, 2), 1, 'first'); %timeVector(epchs-1, 2) * eeg.fs;
+%                     index2 = size(fullTS, 2);
+%                 else
+%                     %index1 = fs * timeVector(epchs-1, 2);
+%                     %index2 = fs * timeVector(epchs, 1);
+%                     index1 = find(fullTS >= timeVector(epchs-1, 2), 1, 'first'); %timeVector(epchs-1, 2) * eeg.fs;
+%                     index2 = find(fullTS <= timeVector(epchs, 1), 1, 'last') - 1;    %timeVector(epchs, 1) * eeg.fs;     
+%                 end
+% 
+%                 shankData(:, index1:index2) = NaN;
+%                 fullTS(:, index1:index2) = NaN;
+%             end
+            startIdx = find(fullTS >= timeVector(1, 1), 1, 'first');
+            endIdx = find(fullTS <= timeVector(end, 2), 1, 'last');
+            shankData = shankData(:, startIdx:endIdx);
+            
+%             shankData(:, isnan(shankData(1, :))) = [];
             startChan = probe.Shank(shankIdx).Site(1).Number;
             endChan = probe.Shank(shankIdx).Site(end).Number;
             %If this changes make sure to change the file name in the spike
@@ -263,7 +292,9 @@ function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, time
             writedat(shankData, strcat(spikeDir, '\',outputName,'\', outputName, ".dat")) 
              
             if shankIdx == probe.ShankCount
-                fullTS(:, isnan(fullTS(1, :))) = [];
+                eeg.spikeFS = fs;
+                fullTS = fullTS(startIdx:endIdx);
+%                 fullTS(:, isnan(fullTS(1, :))) = [];
                 outputName = "rawTime.mat";
                 save(strcat(spikeDir, '\', outputName), 'fullTS', '-v7.3')
 %                 writedat(fullTS, strcat(spikeDir, '\', outputName));
@@ -297,7 +328,7 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
     for T1 = 0:chunkSize:(totalTime-chunkSize)
         T2 = T1 + chunkSize;
         
-        tempData = TDT2mat(inDir, 'TYPE', {'scalars'}, 'T1', T1, 'T2', T2, 'VERBOSE', 0);
+        tempData = TDT2mat_NMD(inDir, 'TYPE', {'scalars'}, 'T1', T1, 'T2', T2, 'VERBOSE', 0);
         %NMD 9/18/18 I'm pretty sure the wave type of the position tracking
         %doesn't ever change. Not 100% though.
         
@@ -306,6 +337,9 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
         posMat = [posMat, tempData.scalars.RVn1.data];
         posTS = [posTS, tempData.scalars.RVn1.ts];
     end    
+%     posData = TDT2mat_NMD(inDir, 'TYPE', {'scalars'}, 'T1', 0, 'T2', 0, 'VERBOSE', 0);
+%     posMat = posData.scalars.RVn1.data;
+%     posTS = posData.scalars.RVn1.ts;
     
     if fill
         lostlocR = find(posMat(3, :) == -1);
@@ -322,7 +356,7 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
     end
     
     %Samples. Currently this would be about two seconds.
-    posPad = round(1/(tempData.scalars.RVn1.ts(2) - tempData.scalars.RVn1.ts(1)))*2;
+    posPad = round(1/(posTS(2) - posTS(1))) * 2;
     
     %Extract position and convert from pixels to cm
 
@@ -349,11 +383,9 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
         %Find the time indexes before and after the start of the
         %epoch. Pad them for interpolation. They'll be trimmed down later.
         index1 = find(posTS >= T1, 1, 'first') - posPad;
-        if index1 < 0; index1 = 0; end
+        if index1 < 1; index1 = 1; end
         index2 = find(posTS <= T2, 1, 'last') + posPad;
         if index2 > size(posMat, 2); index2 = size(posMat, 2)-1; end
-        
-        
         
         epochPosTS = posTS(index1:index2);
        
@@ -389,7 +421,7 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
         
         eeg.(char(epochNames(epochIdx))).raw.redPos = [posMat(3, index1:index2); posMat(4, index1:index2)];
         eeg.(char(epochNames(epochIdx))).raw.greenPos = [posMat(6, index1:index2); posMat(7, index1:index2)];
-        eeg.(char(epochNames(epochIdx))).raw.posTS = epochPosTS(index1:index2);
+        eeg.(char(epochNames(epochIdx))).raw.posTS = epochPosTS;
         eeg.(char(epochNames(epochIdx))).raw.velV = velV(index1:index2);
         eeg.(char(epochNames(epochIdx))).raw.velTS = velTS(index1:index2);
 

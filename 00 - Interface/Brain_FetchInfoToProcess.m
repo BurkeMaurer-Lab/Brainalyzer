@@ -60,19 +60,18 @@ function Brain_FetchInfoToProcess(inDirMetaNPos, inDirEEG, outDir, ratInfo, bloc
 
                 holderData = TDT2mat_NMD(inDirMetaNPos, 'T1', 1, 'T2', 2, 'VERBOSE', 0);
                 holderData = holderData.streams;
-
-                ratInfo.wave(waveIdx).ID = Brain_validateString(ratInfo.wave(waveIdx).ID, fieldnames(holderData));
-                chans = str2num(strrep(ratInfo.wave(waveIdx).Channels, '-', ' '));
-                if size(holderData.(ratInfo.wave(waveIdx).ID).data, 1) ~= (chans(2) - chans(1) + 1)
-                    cprintf('*err', 'ERROR:\n');
-                    cprintf('err', 'Waveform channel counts do not match up\n');
-                end
-                
+% 
+% %                 ratInfo.wave(waveIdx).ID = Brain_validateString(ratInfo.wave(waveIdx).ID, fieldnames(holderData));
+%                 chans = str2num(strrep(ratInfo.wave(waveIdx).Channels, '-', ' '));
+%                 if size(holderData.(ratInfo.wave(waveIdx).ID).data, 1) ~= (chans(2) - chans(1) + 1)
+%                     cprintf('*err', 'ERROR:\n');
+%                     cprintf('err', 'Waveform channel counts do not match up\n');
+%                 end
             else %I'm assuming if this else statement catches then the data is in a SEV file format
                 %NMD 10/11/2018 I don't like this method but it's only temporary to
                 %get some quick data.
                 %Channel one should have the same meta data as the rest
-                tempHolderData = SEV2mat(inDirEEG, 'verbose', 0, 'channel', 0, 't1', 1, 't2', 2);
+                tempHolderData = SEV2mat(inDirEEG, 'verbose', 0, 'channel', 0, 'T1', 1, 'T2', 2);
                 %NMD Does the SEV stream name need to be a user input? I'm
                 %pretty sure that it doesn't change for any SEV files.
                 tempHolderData = tempHolderData.RSn1;
@@ -205,6 +204,11 @@ function Brain_FetchInfoToProcess(inDirMetaNPos, inDirEEG, outDir, ratInfo, bloc
                     end
 
                     fprintf(notes, ['\t\tBad_Channels: ', user_badCh, '\n\n']);
+                    
+                    userPrompt = '\nWould you like to delete the raw data after processing is finished?\n';
+                    validatedAnsr = char(Brain_validateString(userPrompt, {'Yes', 'No'}));
+                    fprintf(notes, ['\t\tDelete_Raw_Data: ', validatedAnsr, '\n\n']);
+                    
                 end
             end
         %end

@@ -12,10 +12,13 @@ close all;
 % directory, etc.                                          %
 %--------------------Editable Constants--------------------%
 %----------------------------------------------------------%
+inDirMetaNPos = 'F:\CA1-CA3_Age\Raw_Tracking_Data\'; %The location of the position tracking and meta data. Typically, where the TDT files are stored. 
+inDirEEG = 'F:\CA1-CA3_Age\Raw_EEG_Data\'; %Where the EEG data is stored. If the data isn't stored as SEV files it will be the same as posNmetaDataDir.
+outDir = 'F:\CA1-CA3_Age\Converted_Data\'; %Where the data will be stored.
 
-inDirMetaNPos = 'D:\CA1-CA3_Age\Raw_Tracking_Data\'; %The location of the position tracking and meta data. Typically, where the TDT files are stored. 
-inDirEEG = 'D:\CA1-CA3_Age\Raw_EEG_Data\'; %Where the EEG data is stored. If the data isn't stored as SEV files it will be the same as posNmetaDataDir.
-outDir = 'D:\CA1-CA3_Age\Converted_Data\'; %Where the data will be stored.
+if inDirMetaNPos(end) ~= '\'; inDirMetaNPos = [inDirMetaNPos, '\']; end
+if inDirEEG(end) ~= '\'; inDirEEG = [inDirEEG, '\']; end
+if outDir(end) ~= '\'; outDir = [outDir, '\']; end
 
 analysis = 1;
 %Choose analysis value from list below
@@ -38,7 +41,7 @@ end
 ratBlocks = cell(size(ratsToProcess, 2), 1);
 %Collect the numbers of the rats that get an error during processing. This
 %will eventually be converted to an error message in future iterations of
-%the code. Dylans is a butt
+%the code. Dylan is a butt
 errRats = [];
 ratIdx = 0;
 
@@ -69,7 +72,7 @@ while ratIdx < size(ratsToProcess, 2)
             ratsToProcess(ratIdx) = [];
             ratBlocks(ratIdx) = [];
             ratIdx = ratIdx - 1;
-            pause(3);
+            pause(5);
             continue;
         end
         %Make sure template file exists. If not, create one.
@@ -92,7 +95,7 @@ while ratIdx < size(ratsToProcess, 2)
             ratsToProcess(ratIdx) = [];
             ratBlocks(ratIdx) = [];
             ratIdx = ratIdx - 1;
-            pause(3);
+            pause(5);
             continue;
         end
         
@@ -141,15 +144,45 @@ end
 %----------------------------------------------------------%
 
 for ratIdx = 1:size(ratsToProcess, 2)
+    
+    
     toDir = [outDir, ratsToProcess(ratIdx).ID, '\'];
     blocks = ratBlocks{ratIdx};
     
-    for blockIdx = 1:size(blocks, 2)
-    %Iterate through rat's blocks
+    %Iterate through rat's blocks   
+    blockIdx = 0;
+    while blockIdx < size(blocks, 2)
+        blockIdx = blockIdx + 1;
         curBlock = char(ratBlocks{ratIdx}(blockIdx));
+        
+        % -inputDir4TDT'
+        %    *Directory where raw TDT files are stored (.tev)
+        curRatBlockMetaNPos = [inDirMetaNPos, ratsToProcess(ratIdx).ID, '\', char(curBlock), '\'];
+        
+        % -inputDir4RSV
+        %    *Directory where raw RS4 files are stored (.sev)
+        curRatBlockEEG = [inDirEEG, ratsToProcess(ratIdx).ID, '\', char(curBlock), '\'];
+        
+        % -blockDir
+        %    *Output directory for all files associated with this block
+        delim_dash = strsplit(char(curBlock), '-');
+        curRatBlockOutDir = [toDir, delim_dash{2}, '-', delim_dash{3}, '\'];
         if analysis == 1
-            Brain_PreProcess(inDirMetaNPos, inDirEEG, toDir, ratsToProcess(ratIdx).ID, curBlock);
+%             try
+                Brain_PreProcess(curRatBlockMetaNPos, curRatBlockEEG, curRatBlockOutDir, curBlock);
+%             catch
+%                 cprintf('*err', '\n\nERROR:');
+%                 cprintf('*err', ['\nUnable to run function "Brain_PreProcess" for block ' num2str(blocks(blockIdx)), ...
+%                     ' of rat: ', num2str(ratsToProcess(ratIdx).ID),... 
+%                     '\nContinuing to next block.\n']);
+%                 errRats = [errRats; [string(ratsToProcess(ratIdx).ID), string(blocks(blockIdx))]];
+%                 blocks(blockIdx) = [];
+%                 blockIdx = blockIdx - 1;
+%                 pause(5);
+%                 continue;
+%             end
         end
+
     end
 end
 
@@ -170,9 +203,26 @@ for ratIdx = 1:size(ratsToProcess, 2)
     ratInfo = Brain_FetchRatInfo(dataDir, ratsToProcess(ratIdx).ID);
     blocks = ratBlocks{ratIdx};
     
-    for blockIdx = 1:size(blocks, 2)
+    %Iterate through rat blocks
+    blockIdx = 0;
+    while blockIdx < size(blocks, 2)
+        blockIdx = blockIdx + 1;
         curBlock = char(ratBlocks{ratIdx}(blockIdx));
-        Brain_PostProcess(dataDir, curBlock);
+        delim_dash = strsplit(curBlock, '-');
+        ratBlockDataDir = [dataDir, delim_dash{2}, '-', delim_dash{3}, '\'];
+        try
+            Brain_PostProcess(ratBlockDataDir);
+        catch
+            cprintf('*err', '\n\nERROR:');
+            cprintf('*err', ['\nUnable to run function "Brain_PreProcess" for block ' num2str(blocks(blockIdx)), ...
+                ' of rat: ', num2str(ratsToProcess(ratIdx).ID),... 
+                '\nContinuing to next block.\n']);
+            errRats = [errRats; [string(ratsToProcess(ratIdx).ID), string(blocks(blockIdx))]];
+            blocks(blockIdx) = [];
+            blockIdx = blockIdx - 1;
+            pause(5);
+            continue;
+        end
         
         if analysis > 1
             [wave, epochs] = Brain_PickWaveAndEpoch([toDir, curBlock, '\'], ratInfo);
@@ -184,12 +234,9 @@ for ratIdx = 1:size(ratsToProcess, 2)
                 Brain_PowerSpectralDensity([toDir, curBlock, '\'], wave, epochs, [0, 3, 5, 15, 35, 100], 'MODE', 'clean');
             elseif analysis == 6
                 Brain_CurrentSourceDensity([toDir, curBlock, '\'], wave, epochs, [-1000 1000]);
-            
             end
         end
     end
 end
     
-clear;
-
 fprintf('\n');
