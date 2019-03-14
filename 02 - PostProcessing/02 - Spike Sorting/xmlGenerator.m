@@ -1,5 +1,4 @@
-function xmlGenerator(destinationFolder, data_name, numberChannels, samplingFrequency)
-
+function xmlGenerator(destinationFolder, data_name, startChan, endChan, BadChs, samplingFrequency)
     xmlFile = fopen([char(destinationFolder) '\' char(data_name) '.xml'],'wt');
     fprintf(xmlFile, '<?xml version=''1.0''?><parameters version="1.0" creator="ndManager-"> <generalInfo>');
     fprintf(xmlFile, [' <date>' datestr(now,'yyyy-mm-dd') '</date>']);
@@ -7,7 +6,7 @@ function xmlGenerator(destinationFolder, data_name, numberChannels, samplingFreq
     fprintf(xmlFile, '  <description/>');
     fprintf(xmlFile, ' <notes/>  </generalInfo> <acquisitionSystem>');
     fprintf(xmlFile, ' <nBits>16</nBits>');
-    fprintf(xmlFile, ' <nChannels>%d</nChannels>', numberChannels);
+    fprintf(xmlFile, ' <nChannels>%d</nChannels>', endChan-startChan+2);
     fprintf(xmlFile, '  <samplingRate>%d</samplingRate>', samplingFrequency);
     fprintf(xmlFile, '  <voltageRange>10</voltageRange>');
     fprintf(xmlFile, ' <amplification>1000</amplification>');
@@ -17,12 +16,16 @@ function xmlGenerator(destinationFolder, data_name, numberChannels, samplingFreq
     fprintf(xmlFile, '  <lfpSamplingRate>6000</lfpSamplingRate>');
     fprintf(xmlFile, ' </fieldPotentials>');
     fprintf(xmlFile, ' <anatomicalDescription>  <channelGroups>   <group>');
-    for channel = 0:numberChannels-1
-        fprintf(xmlFile, '    <channel skip="0">%d</channel>', channel);
+    for channel = 0:(endChan-startChan+1)
+        if (ismember(channel, BadChs))
+            fprintf(xmlFile, '    <channel skip="1">%d</channel>', channel);
+        else
+            fprintf(xmlFile, '    <channel skip="0">%d</channel>', channel);
+        end
     end
     fprintf(xmlFile, '   </group>  </channelGroups> </anatomicalDescription>');
     fprintf(xmlFile, ' <spikeDetection>  <channelGroups>   <group>    <channels>');
-    for channel = 0:numberChannels-1
+    for channel = 0:(endChan-startChan+1)
         fprintf(xmlFile, '     <channel>%d</channel>', channel);
     end
     fprintf(xmlFile, '    </channels>');
@@ -41,7 +44,7 @@ function xmlGenerator(destinationFolder, data_name, numberChannels, samplingFreq
     fprintf(xmlFile, '  <peakSampleIndex>16</peakSampleIndex>');
     fprintf(xmlFile, '  </spikes>');
     fprintf(xmlFile, '  <channels>');
-    for channel= 0:numberChannels-1
+    for channel= 0:(endChan-startChan+1)
         fprintf(xmlFile, '   <channelColors>    <channel>%d</channel>    <color>#0080ff</color>    <anatomyColor>#0080ff</anatomyColor>    <spikeColor>#0080ff</spikeColor>   </channelColors>   <channelOffset>    <channel>%d</channel>    <defaultOffset>0</defaultOffset>   </channelOffset>', channel, channel);
     end
     fprintf(xmlFile, '  </channels> </neuroscope>');

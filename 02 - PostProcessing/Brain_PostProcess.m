@@ -7,11 +7,11 @@
 %and performs operations on them. Currently, the biggest functionality is
 %to implement spike sorting. 
 
-function Brain_PostProcess(dataDir, blockID)
+function Brain_PostProcess(blockDir)
 
     %Open file where notes and data are stored
-    delim_dash = strsplit(blockID, '-');
-    blockDir = [dataDir, delim_dash{2}, '-', delim_dash{3}, '\'];
+%     delim_dash = strsplit(blockID, '-');
+%     blockDir = [dataDir, delim_dash{2}, '-', delim_dash{3}, '\'];
     
     %Get wave information
     notesDir = [blockDir, 'Notes.txt'];
@@ -34,12 +34,9 @@ function Brain_PostProcess(dataDir, blockID)
     %Iterate through waves
     for waveIdx = 1:numWaves
         curWave = wavesBlock.wave(waveIdx);
-        %%%%%%%%%%
-        if waveIdx == 1; continue; end
-        %%%%%%%%%%%%%%%%%%%%%
         if strcmp(curWave.Sort, 'Yes')
             Brain_SpikeSorter(blockDir, curWave);
-        end
+        end   
     end
     fprintf('\n')
 end
@@ -69,15 +66,22 @@ function Brain_SpikeSorter(dataDir, wave)
     
     fs = wave.RecoFreq;
     
-    for shankIdx = 1:probe.ShankCount      
-        %%%%%%%%%%%%%%%%%%%%%
-        if shankIdx == 1; continue; end
-        %%%%%%%%%%%%%%%%%%%%%%%
-        
+    for shankIdx = 1:probe.ShankCount              
         clc;
         startChan = probe.Shank(shankIdx).Site(1).Number;
         endChan = probe.Shank(shankIdx).Site(end).Number;
         rawFileName = strcat("Chan_", num2str(startChan), "-", num2str(endChan));
+        
+        %Check if spike sorting has already occured. If so, prompt user to
+        %double check if they really want to run it again.
+        if isfile([char(spikeDir), '\', rawFileName, '\', rawFileName, '.fet.1'])
+            cprintf('\n\nWARNING!!!! Shank has already been sorted.\nContinuing will delete all previous work.');
+            userPrompt = '\nWould you like to continue anyway?:';
+            validatedAnsr = Brain_validateString(userPrompt, {'yes', 'no'});
+            if string(validatedAnsr) == "no"
+                continue;
+            end
+        end            
         
         numSites = length(probe.Shank(shankIdx).Site);
         %%%Step 1: Create our geometry file for klusta. The file format
@@ -98,7 +102,8 @@ function Brain_SpikeSorter(dataDir, wave)
         dos(['activate klusta && ' spikeDir(1) ': && cd / && cd ' char(spikeDir) '\' char(rawFileName) '&& klusta param.prm --overwrite'], '-echo');
 
         %%%Step 4: Create the XML file necessary for manual clustering.
-        xmlGenerator([char(spikeDir) '\' char(rawFileName)], rawFileName, number_of_live_channels, fs)
+%         xmlGenerator([char(spikeDir) '\' char(rawFileName)], rawFileName, number_of_live_channels, fs)
+        xmlGenerator([char(spikeDir) '\' char(rawFileName)], rawFileName, startChan, endChan, wave.BadChs, fs)
 
         %%%Step 5: Convert Klusta output to kluster input for manual
         %%%clustering with kluster. This is done with the function
@@ -107,36 +112,33 @@ function Brain_SpikeSorter(dataDir, wave)
 
         % Step 6: Delete unnecessary files such as the .prm file, the
         % .prb file, the .klustakwik2 firectory, the .spikedetekt
-        % directory, the kwik file and the kwx file.
-        %The following code has been commented out for testing
-        %purposes:
-    %             fclose('all');
-    %             %Delete .klustakwik2
-    %             if exist([char(outDir) '\' char(rawFileName) '\.klustakwik2'],'file') ~= 0
-    %                 rmdir([char(outDir) '\' char(rawFileName) '\.klustakwik2'], 's');
-    %             end
-    %             %Delete .spikedetekt
-    %             if exist([char(outDir) '\' char(rawFileName) '\.spikedetekt'],'file') ~= 0
-    %                 rmdir([char(outDir) '\' char(rawFileName) '\.spikedetekt'], 's');
-    %             end
-    %             %Delete param.prm
-    %             if exist([char(outDir) '\' char(rawFileName) '\param.prm'],'file') ~= 0
-    %                 delete([char(outDir) '\' char(rawFileName) '\param.prm']);
-    %             end
-    %             %Delete geom.prb 
-    %             if exist([char(outDir) '\' char(rawFileName) '\geom.prb'],'file') ~= 0
-    %                 delete([char(outDir) '\' char(rawFileName) '\geom.prb']);
-    %             end
-    %             %Delete kwik file
-    %             if exist([char(outDir) '\' char(rawFileName) '\' char(rawFileName)  '.kwik'],'file') ~= 0
-    %                 delete([char(outDir) '\' char(rawFileName) '\' char(rawFileName) '.kwik']);
-    %             end
-    %             %Delete kwx file 
-    %             if exist([char(outDir) '\' char(rawFileName) '\' char(rawFileName)  '.kwx'],'file') ~= 0
-    %                 delete([char(outDir) '\' char(rawFileName) '\' char(rawFileName)  '.kwx']);
-    %             end
-
-        %%% IAGO FINISHES WRITING HIS SPIKE SORTING STUFF IN HERE       
+        % directory, the kwik file, the kwx file.
+        
+        %Delete .klustakwik2 and all files and subfolders it contains
+        fclose('all');
+        try rmdir(strcat(string(spikeDir), "\", string(rawFileName), "\", ".klustakwik2"), 's')
+        catch
+            cprintf('*err', '\n\nCould not delete ".klustakwik2" file.');
+            pause(5);
+        end
+        %Delete .spikedetekt and all files and subfolders it contains
+        try rmdir(strcat(string(spikeDir), "\", char(rawFileName), "\", ".spikedetekt"), 's')
+        catch
+            cprintf('*err', '\n\nCould not delete ".spikedetekt" file.');
+            pause(5);
+        end
+        %Delete kwik file
+        try delete(strcat(string(spikeDir), "\", string(rawFileName), "\", string(rawFileName), ".kwik"))
+        catch
+            cprintf('*err', '\n\ncould not delete ".kwik" file.');
+            pause(5); 
+        end
+        %Delete kwx file
+        try delete(strcat(string(spikeDir), "\", string(rawFileName), "\", string(rawFileName), ".kwx"))
+        catch
+            cprintf('*err', '\n\nCould not delete ".kwx" file.');
+            pause(5); 
+        end    
     end
 
     fprintf('\n')
