@@ -213,6 +213,8 @@ function voi_out = parseBRAIN(inDir, voi)
                         voi_out.wave(waveNum).TotChs = str2num(delim_colon{2});
                     elseif strcmp(delim_colon{1}, 'Bad_Channels')
                         voi_out.wave(waveNum).BadChs = str2num(erase(delim_colon{2}, ","));
+                    elseif strcmp(delim_colon{1}, 'Delete_Raw_Data')
+                        voi_out.wave(waveNum).DelRaw = delim_colon{2};
                     end
                     
                     textLine = fgetl(toParse);
