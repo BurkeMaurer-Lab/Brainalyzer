@@ -99,9 +99,7 @@ function Brain_SpikeSorter(dataDir, wave)
         %%%Step 3: Run automatic klustering with klusta. We already
         %have the .prm, the .prb and the .dat files so we are ready
         %to run klusta.
-        if wave.Sort
-            dos(['activate klusta && ' spikeDir(1) ': && cd / && cd ' char(spikeDir) '\' char(rawFileName) '&& klusta param.prm --overwrite'], '-echo');
-        end
+        dos(['activate klusta && ' spikeDir(1) ': && cd / && cd ' char(spikeDir) '\' char(rawFileName) '&& klusta param.prm --overwrite'], '-echo');
 
         %%%Step 4: Create the XML file necessary for manual clustering.
 %         xmlGenerator([char(spikeDir) '\' char(rawFileName)], rawFileName, number_of_live_channels, fs)
@@ -110,9 +108,7 @@ function Brain_SpikeSorter(dataDir, wave)
         %%%Step 5: Convert Klusta output to kluster input for manual
         %%%clustering with kluster. This is done with the function
         %%%ClusteringKlusta2Neurosuite
-        if wave.Sort
-            ConvertKlusta2Neurosuite([char(spikeDir) char(rawFileName)], rawFileName);
-        end
+        ConvertKlusta2Neurosuite([char(spikeDir) char(rawFileName)], rawFileName);
 
         % Step 6: Delete unnecessary files such as the .prm file, the
         % .prb file, the .klustakwik2 firectory, the .spikedetekt
@@ -120,32 +116,29 @@ function Brain_SpikeSorter(dataDir, wave)
         
         %Delete .klustakwik2 and all files and subfolders it contains
         fclose('all');
-        
-        if wave.Sort
-            try rmdir(strcat(string(spikeDir), "\", string(rawFileName), "\", ".klustakwik2"), 's')
-            catch
-                cprintf('*err', '\n\nCould not delete ".klustakwik2" file.');
-                pause(5);
-            end
-            %Delete .spikedetekt and all files and subfolders it contains
-            try rmdir(strcat(string(spikeDir), "\", char(rawFileName), "\", ".spikedetekt"), 's')
-            catch
-                cprintf('*err', '\n\nCould not delete ".spikedetekt" file.');
-                pause(5);
-            end
-            %Delete kwik file
-            try delete(strcat(string(spikeDir), "\", string(rawFileName), "\", string(rawFileName), ".kwik"))
-            catch
-                cprintf('*err', '\n\ncould not delete ".kwik" file.');
-                pause(5); 
-            end
-            %Delete kwx file
-            try delete(strcat(string(spikeDir), "\", string(rawFileName), "\", string(rawFileName), ".kwx"))
-            catch
-                cprintf('*err', '\n\nCould not delete ".kwx" file.');
-                pause(5); 
-            end    
+        try rmdir(strcat(string(spikeDir), "\", string(rawFileName), "\", ".klustakwik2"), 's')
+        catch
+            cprintf('*err', '\n\nCould not delete ".klustakwik2" file.');
+            pause(5);
         end
+        %Delete .spikedetekt and all files and subfolders it contains
+        try rmdir(strcat(string(spikeDir), "\", char(rawFileName), "\", ".spikedetekt"), 's')
+        catch
+            cprintf('*err', '\n\nCould not delete ".spikedetekt" file.');
+            pause(5);
+        end
+        %Delete kwik file
+        try delete(strcat(string(spikeDir), "\", string(rawFileName), "\", string(rawFileName), ".kwik"))
+        catch
+            cprintf('*err', '\n\ncould not delete ".kwik" file.');
+            pause(5); 
+        end
+        %Delete kwx file
+        try delete(strcat(string(spikeDir), "\", string(rawFileName), "\", string(rawFileName), ".kwx"))
+        catch
+            cprintf('*err', '\n\nCould not delete ".kwx" file.');
+            pause(5); 
+        end    
     end
 
     fprintf('\n')

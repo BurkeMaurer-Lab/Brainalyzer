@@ -125,7 +125,7 @@ function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, time
     msg = [];
     eeg.fs = wave.SaveFreq;
     
-    if strcmp(wave.Sort, 'Yes')  
+    if strcmp(wave.SaveDat, 'Yes')  
         spikeDir = [outDir, '02 - Spike Sorting\', char({wave.waveID}), '\'];
         if ~exist(spikeDir, 'dir'), mkdir(spikeDir), end
     end
@@ -218,7 +218,7 @@ function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, time
             if isempty(fullTS); fullTS = [0:(size(tempData, 2) - 1)] ./ fs; end
             
             %Store spike data
-            if strcmp(wave.Sort, 'Yes')
+            if strcmp(wave.SaveDat, 'Yes')
                 if isempty(shankData)
                     shankData = NaN(numSites, length(tempData));
                 end
@@ -247,7 +247,7 @@ function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, time
         end
         
         %Cut and save spike-sort data if required
-        if strcmp(wave.Sort, 'Yes')            
+        if strcmp(wave.SaveDat, 'Yes')            
             %NMD 11/15/18 No longer cutting out the periods between epochs.
             %It makes cluster cutting much more difficult because there are
             %clear separations between the epochs and it makes the data
@@ -332,7 +332,9 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
         %NMD 9/18/18 I'm pretty sure the wave type of the position tracking
         %doesn't ever change. Not 100% though.
         
-
+        if isempty(tempData.scalars)
+            return;
+        end
         
         posMat = [posMat, tempData.scalars.RVn1.data];
         posTS = [posTS, tempData.scalars.RVn1.ts];

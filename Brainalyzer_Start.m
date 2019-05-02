@@ -85,19 +85,19 @@ while ratIdx < size(ratsToProcess, 2)
         curRatInDirEEG = [inDirEEG, ratsToProcess(ratIdx).ID, '\'];
                 
 %       blocks = Brain_FetchBlocksToProcess(inDirT, ratsToProcess(ratIdx).ID);
-        try
+%         try
             blocks = Brain_FetchBlocksToProcess(curRatInDirMeta, ratsToProcess(ratIdx).ID);
-        catch 
-            cprintf('*err', '\n\nERROR:');
-            cprintf('*err', ['\nUnable to run function "Brain_FetchBlocksToProcess" for rat: ', num2str(ratsToProcess(ratIdx).ID),... 
-                '\nContinuing to next rat.']);
-            errRats = [errRats [string(ratsToProcess(ratIdx).ID), "all blocks"]];
-            ratsToProcess(ratIdx) = [];
-            ratBlocks(ratIdx) = [];
-            ratIdx = ratIdx - 1;
-            pause(5);
-            continue;
-        end
+%         catch 
+%             cprintf('*err', '\n\nERROR:');
+%             cprintf('*err', ['\nUnable to run function "Brain_FetchBlocksToProcess" for rat: ', num2str(ratsToProcess(ratIdx).ID),... 
+%                 '\nContinuing to next rat.']);
+%             errRats = [errRats [string(ratsToProcess(ratIdx).ID), "all blocks"]];
+%             ratsToProcess(ratIdx) = [];
+%             ratBlocks(ratIdx) = [];
+%             ratIdx = ratIdx - 1;
+%             pause(5);
+%             continue;
+%         end
         
 %         Brain_FetchInfoToProcess(inDirT, inDirS, outDir, ratInfo, blocks);
         while blockIdx < size(blocks, 2)
