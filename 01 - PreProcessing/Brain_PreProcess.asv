@@ -222,15 +222,38 @@ function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, time
             %Store spike data
             if strcmp(wave.SaveDat, 'Yes')
                 startIdx = find(fullTS >= timeVector(1, 1), 1, 'first');
-                endIdx = find(fullTS <= timeVector(end, 2), 1, 'last');%             
+                endIdx = find(fullTS <= timeVector(end, 2), 1, 'last');
+                outIdxVecNumel = numSites * length(tempData(startIdx:endIdx));
+%                 startChan = probe.Shank(shankIdx).Site(1).Number;
+%                 endChan = probe.Shank(shankIdx).Site(end).Number;
+%                 outputName = strcat("Chan_", num2str(startChan), "-", num2str(endChan));
+%                 if exist([char(spikeDir) '\' char(outputName)],'file') == 0 %If spike sorting data doesn't exists
+%                     mkdir(char(spikeDir), char(outputName)); %Make a directory for this shank's spike sorting data
+%                 end
+%                 
+%                 outFileName = strcat(spikeDir, '\', outputName, '\', outputName, ".dat");
+%                 if siteIdx == 1
+%                     fID = fopen(outFileName, 'w');
+%                 elseif siteIdx == numSites
+%                     fclose(fID);
+%                 end
+%                 fwrite(fID, (tempData(startIdx:endIdx).' .* 10^6), 'int16');
+%                 
+%                 if shankIdx == probe.ShankCount
+%                     eeg.spikeFS = fs;
+%                     fullTS = fullTS(startIdx:endIdx);
+%                     outputName = "rawTime.mat";
+%                     save(strcat(spikeDir, '\', outputName), 'fullTS', '-v7.3')
+%                 end
+%             
 %                             
                 if isempty(shankData)
                     outIdxVecNumel = numSites * length(tempData(startIdx:endIdx));
                     shankData = NaN(outIdxVecNumel, 1);
                     outIdxVec = 1:numSites:(outIdxVecNumel - numSites + 1);
-%                     shankData = NaN(numSites, length(tempData(startIdx:endIdx)));
+                    shankData = NaN(numSites, length(tempData(startIdx:endIdx)));
                 end
-                shankData(outIdxVec + (siteIdx - 1)) = tempData(startIdx:endIdx).' .* 10^6;                
+                shankData(siteIdx, :) = tempData(startIdx:endIdx);                
             end
             
             %Store epoch data
@@ -271,9 +294,7 @@ function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, time
      
 %             writedat(shankData(:, startIdx:endIdx), strcat(spikeDir, '\',outputName,'\', outputName, ".dat")) 
             outFileName = strcat(spikeDir, '\',outputName,'\', outputName, ".dat");
-            fID = fopen(outFileName, 'w');
-            fwrite(fID, shankData, 'int16');
-            fclose(fID);
+            
              
             if shankIdx == probe.ShankCount
                 eeg.spikeFS = fs;
