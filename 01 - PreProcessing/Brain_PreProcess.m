@@ -377,6 +377,9 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
                 curYGreen(j) = nan;
             end
             j = j + 1;
+            if j > length(curXRed)
+                break;
+            end
             curVel = sqrt((curXRed(j) - curXRed(i))^2 + (curYRed(j) - curYRed(i))^2) ./ (posTS(j) - posTS(i));
         end
         i = j;

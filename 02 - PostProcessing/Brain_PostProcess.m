@@ -99,7 +99,7 @@ function Brain_SpikeSorter(dataDir, wave)
         %%%Step 3: Run automatic klustering with klusta. We already
         %have the .prm, the .prb and the .dat files so we are ready
         %to run klusta.
-        if wave.Sort
+        if strcmp(wave.Sort, 'Yes')
             dos(['activate klusta && ' spikeDir(1) ': && cd / && cd ' char(spikeDir) '\' char(rawFileName) '&& klusta param.prm --overwrite'], '-echo');
         end
 
@@ -110,7 +110,7 @@ function Brain_SpikeSorter(dataDir, wave)
         %%%Step 5: Convert Klusta output to kluster input for manual
         %%%clustering with kluster. This is done with the function
         %%%ClusteringKlusta2Neurosuite
-        if wave.Sort
+        if strcmp(wave.Sort, 'Yes')
             ConvertKlusta2Neurosuite([char(spikeDir) char(rawFileName)], rawFileName);
         end
 
@@ -121,7 +121,7 @@ function Brain_SpikeSorter(dataDir, wave)
         %Delete .klustakwik2 and all files and subfolders it contains
         fclose('all');
         
-        if wave.Sort
+        if strcmp(wave.Sort, 'Yes')
             try rmdir(strcat(string(spikeDir), "\", string(rawFileName), "\", ".klustakwik2"), 's')
             catch
                 cprintf('*err', '\n\nCould not delete ".klustakwik2" file.');
