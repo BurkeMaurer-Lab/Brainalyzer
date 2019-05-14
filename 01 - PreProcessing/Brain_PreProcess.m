@@ -549,10 +549,10 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
         vel.v = interp1(vel.ts, vel.v, eegTS, 'pchip');
         vel.ts = eegTS;
         
-        curXRed = interp1(epochPosTS, epochXRed, eegTS, 'pchip');
-        curYRed = interp1(epochPosTS, epochYRed, eegTS, 'pchip');
-        curXGreen = interp1(epochPosTS, epochXGreen, eegTS, 'pchip');
-        curYGreen = interp1(epochPosTS, epochYGreen, eegTS, 'pchip');
+        epochXRed = interp1(epochPosTS, epochXRed, eegTS, 'pchip');
+        epochYRed = interp1(epochPosTS, epochYRed, eegTS, 'pchip');
+        epochXGreen = interp1(epochPosTS, epochXGreen, eegTS, 'pchip');
+        epochYGreen = interp1(epochPosTS, epochYGreen, eegTS, 'pchip');
         
 %         xposR = interp1(epochPosTS, xposR, eegTS, 'spline');
 %         yposR = interp1(epochPosTS, yposR, eegTS, 'spline');
