@@ -95,7 +95,7 @@ function Brain_SpikeSorter(dataDir, wave)
         %%%format is .prm and we do it by calling the function
         %%%prmGenerator 
         
-        prmGenerator([char(spikeDir) '\' char(rawFileName)], rawFileName, numSites, fs, low_bandpass, high_bandpass, low_threshold, high_threshold, spike_direction);
+        Brain_prmGenerator([char(spikeDir) '\' char(rawFileName)], rawFileName, numSites, fs, low_bandpass, high_bandpass, low_threshold, high_threshold, spike_direction);
 
         %%%Step 3: Run automatic klustering with klusta. We already
         %have the .prm, the .prb and the .dat files so we are ready
@@ -106,13 +106,13 @@ function Brain_SpikeSorter(dataDir, wave)
 
         %%%Step 4: Create the XML file necessary for manual clustering.
 %         xmlGenerator([char(spikeDir) '\' char(rawFileName)], rawFileName, number_of_live_channels, fs)
-        xmlGenerator([char(spikeDir) '\' char(rawFileName)], rawFileName, startChan, endChan, wave.BadChs, fs, lfpFS)
+        Brain_xmlGenerator([char(spikeDir) '\' char(rawFileName)], rawFileName, startChan, endChan, wave.BadChs, fs, lfpFS)
 
         %%%Step 5: Convert Klusta output to kluster input for manual
         %%%clustering with kluster. This is done with the function
         %%%ClusteringKlusta2Neurosuite
         if strcmp(wave.Sort, 'Yes')
-            ConvertKlusta2Neurosuite([char(spikeDir) char(rawFileName)], rawFileName);
+            Brain_ConvertKlusta2Neurosuite([char(spikeDir) char(rawFileName)], rawFileName);
         end
 
         % Step 6: Delete unnecessary files such as the .prm file, the
