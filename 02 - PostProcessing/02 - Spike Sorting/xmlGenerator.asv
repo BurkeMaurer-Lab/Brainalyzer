@@ -39,7 +39,7 @@ function xmlGenerator(destinationFolder, data_name, startChan, endChan, BadChs, 
         end
     end
     fprintf(xmlFile, '\n   </group>');
-    fprintf(xmlFile, '\n  </channelGroups>');
+    fpritnf(xmlFile, '\n  </channelGroups>');
     fprintf(xmlFile, '\n </anatomicalDescription>');
     fprintf(xmlFile, '\n <spikeDetection>');
     fprintf(xmlFile, '\n  <channelGroups>');
@@ -55,7 +55,7 @@ function xmlGenerator(destinationFolder, data_name, startChan, endChan, BadChs, 
     fprintf(xmlFile, '\n   </group>');
     fprintf(xmlFile, '\n  </channelGroups>');
     fprintf(xmlFile, '\n </spikeDetection>');
-    fprintf(xmlFile, '\n <units></units>');
+    fprintf(xmlFile, '\n <units>\n</units>');
     fprintf(xmlFile, '\n <neuroscope version="1.2.5">');
     fprintf(xmlFile, '\n  <miscellaneous>');
     fprintf(xmlFile, '\n   <screenGain>0.200000</screenGain>');
@@ -65,7 +65,7 @@ function xmlGenerator(destinationFolder, data_name, startChan, endChan, BadChs, 
     fprintf(xmlFile, '\n   <rotate>0</rotate>');
     fprintf(xmlFile, '\n   <flip>0</flip>');
     fprintf(xmlFile, '\n   <videoImage></videoImage>');
-    fprintf(xmlFile, '\n   <positionsBackground>0</positionsBackground>');
+    fpritnf(xmlFile, '\n   <positionsBackground>0</positionsBackground>');
     fprintf(xmlFile, '\n  </video>');
     fprintf(xmlFile, '\n  <spikes>');
     fprintf(xmlFile, '\n   <nSamples>32</nSamples>');
@@ -117,7 +117,8 @@ function xmlGenerator(destinationFolder, data_name, startChan, endChan, BadChs, 
     % ndm_pca program
     fprintf(xmlFile, '\n  <program>');
     fprintf(xmlFile, '\n   <name>ndm_pca</name>');
-    fprintf(xmlFile, '\n   <parameters></parameters>');
+    fprintf(xmlFile, '\n   <parameters>');
+    fprintf(xmlFile, '\n   <\parameters>');
     fprintf(xmlFile, '\n   <help>Compute principal component analysis (PCA). PARAMETERS All parameters are defined in the ''Acquisition System'' and ''Spike Groups'' tab. </help>');
     fprintf(xmlFile, '\n  </program>');
     
