@@ -68,10 +68,13 @@ function Brain_ConvertKlusta2Neurosuite(basepath,basename)
     %% spike extraction from dat
     dat=memmapfile(char(datpath),'Format','int16'); %Map the data file
     tsampsperwave = (sbefore+safter); %(16 + 16) = 32
-    ngroupchans = length(channellist);%(11) = 11
-    valsperwave = tsampsperwave * ngroupchans;%(32*11) = 352
-    wvforms_all=zeros(length(spktimes)*tsampsperwave*ngroupchans,1,'int16'); %Vector with 248662spikes*32timepoints*11channels
-    wvranges = zeros(length(spktimes),ngroupchans); %Array with 11 channels x 248662 spikes
+%     ngroupchans = length(channellist);%(11) = 11
+%     valsperwave = tsampsperwave * ngroupchans;%(32*11) = 352
+%     wvforms_all=zeros(length(spktimes)*tsampsperwave*ngroupchans,1,'int16'); %Vector with 248662spikes*32timepoints*11channels
+%     wvranges = zeros(length(spktimes),ngroupchans); %Array with 11 channels x 248662 spikes
+    valsperwave = tsampsperwave * totalch;%(32*11) = 352
+    wvforms_all=zeros(length(spktimes)*tsampsperwave*totalch,1,'int16'); %Vector with 248662spikes*32timepoints*11channels
+    wvranges = zeros(length(spktimes),totalch); %Array with 11 channels x 248662 spikes
     wvpowers = zeros(1,length(spktimes)); %Vector with 248662spikes
     for j=1:length(spktimes) %For every spike
         try
@@ -79,7 +82,7 @@ function Brain_ConvertKlusta2Neurosuite(basepath,basename)
             %w = dat.data((double(spktimes(j))-16).*11+1:(double(spktimes(j))+16).*11);
             wvforms=reshape(w,totalch,[]); %Reshapae w into an array with 11 rows
             %select needed channels
-            wvforms = wvforms(channellist,:);
+%             wvforms = wvforms(channellist,:);
             %         % detrend
             %         wvforms = floor(detrend(double(wvforms)));
             % median subtract
@@ -92,11 +95,13 @@ function Brain_ConvertKlusta2Neurosuite(basepath,basename)
         end
     
         %some processing for fet file
-        wvaswv = reshape(wvforms,tsampsperwave,ngroupchans);
+%         wvaswv = reshape(wvforms,tsampsperwave,ngroupchans);
+        wvaswv = reshape(wvforms,tsampsperwave,totalch);
         wvranges(j,:) = range(wvaswv);
         wvpowers(j) = sum(sum(wvaswv.^2));
     
-        lastpoint = tsampsperwave*ngroupchans*(j-1);
+%         lastpoint = tsampsperwave*ngroupchans*(j-1);
+        lastpoint = tsampsperwave*totalch*(j-1);
         wvforms_all(lastpoint+1 : lastpoint+valsperwave) = wvforms;
         %     wvforms_all(j,:,:)=int16(floor(detrend(double(wvforms)')));
         if rem(j,50000) == 0
@@ -149,7 +154,7 @@ function Brain_ConvertKlusta2Neurosuite(basepath,basename)
 
 
     %fet
-    SaveFetIn(char(fetname),fets);
+    Brain_SaveFetIn(char(fetname),fets);
     % dlmwrite(fetname,nfets)
     % dlmwrite(fetname,fets,'-append')
     % % fid=fopen(fetname,'w');

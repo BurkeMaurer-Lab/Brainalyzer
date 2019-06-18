@@ -134,18 +134,18 @@ function Brain_SpikeSorter(dataDir, wave)
                 cprintf('*err', '\n\nCould not delete ".spikedetekt" file.');
                 pause(5);
             end
-            %Delete kwik file
-            try delete(strcat(string(spikeDir), "\", string(rawFileName), "\", string(rawFileName), ".kwik"))
-            catch
-                cprintf('*err', '\n\ncould not delete ".kwik" file.');
-                pause(5); 
-            end
-            %Delete kwx file
-            try delete(strcat(string(spikeDir), "\", string(rawFileName), "\", string(rawFileName), ".kwx"))
-            catch
-                cprintf('*err', '\n\nCould not delete ".kwx" file.');
-                pause(5); 
-            end    
+%             %Delete kwik file
+%             try delete(strcat(string(spikeDir), "\", string(rawFileName), "\", string(rawFileName), ".kwik"))
+%             catch
+%                 cprintf('*err', '\n\ncould not delete ".kwik" file.');
+%                 pause(5); 
+%             end
+%             %Delete kwx file
+%             try delete(strcat(string(spikeDir), "\", string(rawFileName), "\", string(rawFileName), ".kwx"))
+%             catch
+%                 cprintf('*err', '\n\nCould not delete ".kwx" file.');
+%                 pause(5); 
+%             end    
         end
     end
 

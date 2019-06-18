@@ -1,4 +1,4 @@
-function SaveFetIn(FileName, Fet, BufSize)
+function Brain_SaveFetIn(FileName, Fet, BufSize)
 
     if nargin<3 || isempty(BufSize)
         BufSize = inf;
