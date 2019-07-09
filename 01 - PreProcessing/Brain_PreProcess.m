@@ -125,7 +125,7 @@ function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, time
     msg = [];
     eeg.fs = wave.SaveFreq;
     
-    if strcmp(wave.Sort, 'Yes')  
+    if strcmp(wave.SaveDat, 'Yes')  
         spikeDir = [outDir, '02 - Spike Sorting\', char({wave.waveID}), '\'];
         if ~exist(spikeDir, 'dir'), mkdir(spikeDir), end
     end
@@ -217,12 +217,20 @@ function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, time
 %             if isempty(fullTS); fullTS = (0:1/fs:((1/fs)*(size(tempData, 2)-1))); end
             if isempty(fullTS); fullTS = [0:(size(tempData, 2) - 1)] ./ fs; end
             
+
+            
             %Store spike data
-            if strcmp(wave.Sort, 'Yes')
+            if strcmp(wave.SaveDat, 'Yes')
+                startIdx = find(fullTS >= timeVector(1, 1), 1, 'first');
+                endIdx = find(fullTS <= timeVector(end, 2), 1, 'last');%             
+%                             
                 if isempty(shankData)
-                    shankData = NaN(numSites, length(tempData));
+                    outIdxVecNumel = numSites * length(tempData(startIdx:endIdx));
+                    shankData = NaN(outIdxVecNumel, 1);
+                    outIdxVec = 1:numSites:(outIdxVecNumel - numSites + 1);
+%                     shankData = NaN(numSites, length(tempData(startIdx:endIdx)));
                 end
-                shankData(siteIdx, :) = tempData;                
+                shankData(outIdxVec + (siteIdx - 1)) = tempData(startIdx:endIdx).' .* 10^6;                
             end
             
             %Store epoch data
@@ -247,36 +255,8 @@ function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, time
         end
         
         %Cut and save spike-sort data if required
-        if strcmp(wave.Sort, 'Yes')            
-            %NMD 11/15/18 No longer cutting out the periods between epochs.
-            %It makes cluster cutting much more difficult because there are
-            %clear separations between the epochs and it makes the data
-            %disjointed.
-%             for epchs = 1:(numEpochs + 1)
-%                 if epchs == 1
-%                     index1 = 1;
-%                     %index2 = fs * timeVector(epchs, 1);
-%                     index2 = find(fullTS <= timeVector(epchs, 1), 1, 'last') - 1;    %timeVector(epchs, 1) * eeg.fs;
-%                 elseif epchs == size(timeVector, 1)+1
-%                     %index1 = fs * timeVector(epchs-1, 2);
-%                     %index2 = size(eegTemp, 2) * fs;
-%                     index1 = find(fullTS >= timeVector(epchs-1, 2), 1, 'first'); %timeVector(epchs-1, 2) * eeg.fs;
-%                     index2 = size(fullTS, 2);
-%                 else
-%                     %index1 = fs * timeVector(epchs-1, 2);
-%                     %index2 = fs * timeVector(epchs, 1);
-%                     index1 = find(fullTS >= timeVector(epchs-1, 2), 1, 'first'); %timeVector(epchs-1, 2) * eeg.fs;
-%                     index2 = find(fullTS <= timeVector(epchs, 1), 1, 'last') - 1;    %timeVector(epchs, 1) * eeg.fs;     
-%                 end
-% 
-%                 shankData(:, index1:index2) = NaN;
-%                 fullTS(:, index1:index2) = NaN;
-%             end
-            startIdx = find(fullTS >= timeVector(1, 1), 1, 'first');
-            endIdx = find(fullTS <= timeVector(end, 2), 1, 'last');
-            shankData = shankData(:, startIdx:endIdx);
-            
-%             shankData(:, isnan(shankData(1, :))) = [];
+        if strcmp(wave.SaveDat, 'Yes')            
+
             startChan = probe.Shank(shankIdx).Site(1).Number;
             endChan = probe.Shank(shankIdx).Site(end).Number;
             %If this changes make sure to change the file name in the spike
@@ -289,7 +269,11 @@ function eeg = Brain_LoadWaveform(inDirEEG, outDir, blockID, wave, waveIdx, time
                  mkdir(char(spikeDir), char(outputName)); %Make a directory for this shank's spike sorting data
             end
      
-            writedat(shankData, strcat(spikeDir, '\',outputName,'\', outputName, ".dat")) 
+%             writedat(shankData(:, startIdx:endIdx), strcat(spikeDir, '\',outputName,'\', outputName, ".dat")) 
+            outFileName = strcat(spikeDir, '\',outputName,'\', outputName, ".dat");
+            fID = fopen(outFileName, 'w');
+            fwrite(fID, shankData, 'int16');
+            fclose(fID);
              
             if shankIdx == probe.ShankCount
                 eeg.spikeFS = fs;
@@ -309,7 +293,12 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
     cprintf('text', '\nLoading waveform complete\nLoading position data\n');
     %cprintf('text', 'All channels loaded\nLoading position data\n');
     %Should be a user
+    strongThresh = 3;
+    weakThresh = 1;
+    coordSmoothWinSize = .5; %seconds
     cmPERpix = 0.27125;
+    padTime = 5; %seconds
+    maxVel = 150; %cm/sec
     chunkSize = 1200;
     %Fill should be a user input.
     fill = 1; %Constant for if you want to try to fill in missing data points
@@ -332,7 +321,9 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
         %NMD 9/18/18 I'm pretty sure the wave type of the position tracking
         %doesn't ever change. Not 100% though.
         
-
+        if isempty(tempData.scalars)
+            return;
+        end
         
         posMat = [posMat, tempData.scalars.RVn1.data];
         posTS = [posTS, tempData.scalars.RVn1.ts];
@@ -341,37 +332,184 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
 %     posMat = posData.scalars.RVn1.data;
 %     posTS = posData.scalars.RVn1.ts;
     
+%   NaN the missing data
     if fill
         lostlocR = find(posMat(3, :) == -1);
         posMat(3, lostlocR) = NaN;
-        posMat(3, :) = inpaintn(posMat(3, :));
+%         posMat(3, :) = inpaintn(posMat(3, :));
         posMat(4, lostlocR) = NaN;
-        posMat(4, :) = inpaintn(posMat(4, :));
+%         posMat(4, :) = inpaintn(posMat(4, :));
 
         lostlocG = find(posMat(6, :) == -1);
         posMat(6, lostlocG) = NaN;
-        posMat(6, :) = inpaintn(posMat(6, :));
+%         posMat(6, :) = inpaintn(posMat(6, :));
         posMat(7, lostlocG) = NaN;
-        posMat(7, :) = inpaintn(posMat(7, :));
+%         posMat(7, :) = inpaintn(posMat(7, :));
     end
     
-    %Samples. Currently this would be about two seconds.
-    posPad = round(1/(posTS(2) - posTS(1))) * 2;
+    %Save the indices of the values that were saved by the camera to see
+    %what values have been interpolated and what values are recorded.
+    nonInterpRedIndices = ~isnan(posMat(3, :));
+    nonInterpGreenIndices = ~isnan(posMat(6, :));
     
-    %Extract position and convert from pixels to cm
+    %Get rid of periods of very high velocity that would be caused by the
+    %incorrect LED identification. Another way to do this is to predict the
+    %values using inpaintn and then measure the error between the actual
+    %and predicted value. A very high error would be caused by a false
+    %positive of LED selection.
+    curXRed = posMat(3, :) .* cmPERpix;
+    curYRed = posMat(4, :) .* cmPERpix;
+    curXGreen = posMat(6, :) .* cmPERpix;
+    curYGreen = posMat(7, :) .* cmPERpix;
+    i = 1;
+    while i < length(curXRed)
+        if isnan(curXRed(i))
+            i = i + 1;
+            continue; 
+        end
+        j = i + 1;
+        curVel = sqrt((curXRed(j) - curXRed(i))^2 + (curYRed(j) - curYRed(i))^2) ./ (posTS(j) - posTS(i));
+        while isnan(curVel) || curVel > maxVel
+            if ~isnan(curXRed(j))
+                curXRed(j) = nan;
+                curYRed(j) = nan;
+                curXGreen(j) = nan;
+                curYGreen(j) = nan;
+            end
+            j = j + 1;
+            if j > length(curXRed)
+                break;
+            end
+            curVel = sqrt((curXRed(j) - curXRed(i))^2 + (curYRed(j) - curYRed(i))^2) ./ (posTS(j) - posTS(i));
+        end
+        i = j;
+    end
 
-    %posMat = posMat; % .* cmPERpix;
-    %eegFS = eeg.fs;
+    %Fill in missing values. Hopefully the incorrectly selected values were
+    %removed so that the interpolated values are not filling in the spaces
+    %of bad data.
+    curXRed = inpaintn(curXRed);
+    curYRed = inpaintn(curYRed);
+    curXGreen = inpaintn(curXGreen);
+    curYGreen = inpaintn(curYGreen);
     
-    %Velocity calculation
-    velV = sqrt((posMat(3, 2:end) - posMat(3, 1:(end-1))).^2 + (posMat(4, 2:end) - posMat(4, 1:(end-1))).^2) ...
-        ./ (posTS(2:end) - posTS(1:(end-1)));
-    velV = velV .* cmPERpix;
-    velTS = mean([posTS(2:end); posTS(1:end-1)], 1);
+    %Smooth the coordinates to reduce spurious velocity reading from jitter
+    %detection noise
+    avgRF = 1 / mean(diff(posTS));
+    coordSmoothWinSize = floor(coordSmoothWinSize * avgRF);
+    if mod(coordSmoothWinSize, 2) == 0
+        coordSmoothWinSize = coordSmoothWinSize + 1;
+    end
+    coordSmoothWin = gausswin(coordSmoothWinSize);
+    coordSmoothWin = coordSmoothWin ./ sum(coordSmoothWin);
+    %Pad the beginning and end of the vectors with the first and last
+    %element of said vectors to reduce error from smoothing over the
+    %automatic padding, which is a string of zeros. 
+    %Smooth the coordinates with a Gaussian window. We're going to do one
+    %dimensional smoothing, but I think two dimensional smoothing could be
+    %implimented here for better accuracy. For the future, we could also
+    %get a camera with a much higher frame rate and then calculate the
+    %center of mass over a range of frames. We can't do that here because
+    %the jitter induced by the LEDs and tracking program are within the
+    %bounds of normal velocity. But very high velocities should give us a
+    %better idea of center of mass.
+    padRedXStart = repmat(curXRed(1), 1, (length(coordSmoothWin) - 1) / 2);
+    padRedXEnd = repmat(curXRed(end), 1, (length(coordSmoothWin) - 1) / 2);
+    curXRed = [padRedXStart curXRed padRedXEnd];
+    curXRed = conv(curXRed, coordSmoothWin, 'same');
+    curXRed = curXRed(((length(coordSmoothWin) - 1) / 2 + 1):(end - ((length(coordSmoothWin) - 1) / 2)));
     
-    %Acceleration calculation
-    accA = gradient(velV);
-    accTS = velTS;
+    padRedYStart = repmat(curYRed(1), 1, (length(coordSmoothWin) - 1) / 2);
+    padRedYEnd = repmat(curYRed(end), 1, (length(coordSmoothWin) - 1) / 2);
+    curYRed = [padRedYStart curYRed padRedYEnd];
+    curYRed = conv(curYRed, coordSmoothWin, 'same');
+    curYRed = curYRed(((length(coordSmoothWin) - 1) / 2 + 1):(end - ((length(coordSmoothWin) - 1) / 2)));
+    
+    padGreenXStart = repmat(curXGreen(1), 1, (length(coordSmoothWin) - 1) / 2);
+    padGreenXEnd = repmat(curXGreen(end), 1, (length(coordSmoothWin) - 1) / 2);
+    curXGreen = [padGreenXStart curXGreen padGreenXEnd];
+    curXGreen = conv(curXGreen, coordSmoothWin, 'same');
+    curXGreen = curXGreen(((length(coordSmoothWin) - 1) / 2 + 1):(end - ((length(coordSmoothWin) - 1) / 2)));
+    
+    padGreenYStart = repmat(curYGreen(1), 1, (length(coordSmoothWin) - 1) / 2);
+    padGreenYEnd = repmat(curYGreen(end), 1, (length(coordSmoothWin) - 1) / 2);
+    curYGreen = [padGreenYStart curYGreen padGreenYEnd];
+    curYGreen = conv(curYGreen, coordSmoothWin, 'same');
+    curYGreen = curYGreen(((length(coordSmoothWin) - 1) / 2 + 1):(end - ((length(coordSmoothWin) - 1) / 2)));    
+    
+    %Calculate acceleration as the next step in identifying periods of
+    %false positive LED findings
+    curVel = sqrt(diff(curXRed).^2 + diff(curYRed).^2) ./ diff(posTS);
+    tempTS = posTS(1:(end - 1)) + (diff(posTS) ./ 2);
+    curVel = interp1(tempTS, curVel, posTS, 'pchip');
+    
+    curAcc = diff(curVel) ./ diff(posTS);
+    tempTS = posTS(1:(end - 1)) + (diff(posTS) ./ 2);
+    curAcc = abs(interp1(tempTS, curAcc, posTS, 'pchip'));
+    
+    meanAcc = mean(curAcc);
+    stdAcc = std(curAcc);
+    
+    accBoolStrong = curAcc >= (meanAcc + (strongThresh * stdAcc));
+    accBoolWeak = curAcc >= (meanAcc + (weakThresh * stdAcc));
+    accAdjustCount = 0;
+    prevSumBad = sum(accBoolStrong);
+    while sum(accBoolStrong) > 1
+        accIdx = 1;
+        while accIdx < (length(accBoolStrong))
+            accIdx = accIdx + 1;
+            if accBoolStrong(accIdx)
+                minIdx = 0;
+                minStartIdx = minIdx;
+                minEndIdx = minIdx;
+                while ~minStartIdx || ~minEndIdx
+                    minIdx = minIdx + 1;
+
+                    if ~minStartIdx && (accIdx == minIdx)
+                        minStartIdx = minIdx - 1;
+                    end
+
+                    if ~minEndIdx && (accIdx + minIdx > length(accBoolStrong))
+                        minEndIdx = minIdx - 1;
+                    end
+
+                    if ~minStartIdx && ~accBoolWeak(accIdx - minIdx); minStartIdx = minIdx; end
+                    if ~minEndIdx && ~accBoolWeak(accIdx + minIdx); minEndIdx = minIdx; end
+                end
+                startIdx = accIdx - minStartIdx;
+                endIdx = accIdx + minEndIdx;
+
+                curXRed(startIdx:endIdx) = NaN;
+                curYRed(startIdx:endIdx) = NaN;
+                curXGreen(startIdx:endIdx) = NaN;
+                curYGreen(startIdx:endIdx) = NaN;
+                accIdx = accIdx + minEndIdx;
+            end
+        end
+        curXRed = inpaintn(curXRed);
+        curYRed = inpaintn(curYRed);
+        curXGreen = inpaintn(curXGreen);
+        curYGreen = inpaintn(curYGreen);
+
+        curVel = sqrt(diff(curXRed).^2 + diff(curYRed).^2) ./ diff(posTS);
+        tempTS = posTS(1:(end - 1)) + (diff(posTS) ./ 2);
+        curVel = interp1(tempTS, curVel, posTS, 'pchip');
+
+        curAcc = diff(curVel) ./ diff(posTS);
+        tempTS = posTS(1:(end - 1)) + (diff(posTS) ./ 2);
+        curAcc = abs(interp1(tempTS, curAcc, posTS, 'pchip'));
+
+        accBoolStrong = curAcc >= (meanAcc + (strongThresh * stdAcc));
+        accBoolWeak = curAcc >= (meanAcc + (weakThresh * stdAcc));
+
+        accAdjustCount = accAdjustCount + 1;
+        if abs(prevSumBad - sum(accBoolStrong)) < 5
+            break;
+        elseif accAdjustCount > 10
+            break;
+        end
+        prevSumBad = sum(accBoolStrong);
+    end
     
     %Iterate through the epochs
     for epochIdx = 1:numEpochs
@@ -382,22 +520,24 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
         
         %Find the time indexes before and after the start of the
         %epoch. Pad them for interpolation. They'll be trimmed down later.
-        index1 = find(posTS >= T1, 1, 'first') - posPad;
+%         index1 = find(posTS >= T1, 1, 'first') - posPadIdx;
+%         if index1 < 1; index1 = 1; end
+%         index2 = find(posTS <= T2, 1, 'last') + posPadIdx;
+%         if index2 > size(posMat, 2); index2 = size(posMat, 2)-1; end
+        
+        index1 = find(posTS >= T1, 1, 'first');
         if index1 < 1; index1 = 1; end
-        index2 = find(posTS <= T2, 1, 'last') + posPad;
+        index2 = find(posTS <= T2, 1, 'last');
         if index2 > size(posMat, 2); index2 = size(posMat, 2)-1; end
         
         epochPosTS = posTS(index1:index2);
-       
-        xposR = posMat(3, index1:index2);
-        yposR = posMat(4, index1:index2);
-        
-        xposG = posMat(6, index1:index2);
-        yposG = posMat(7, index1:index2);
-        
 
-        vel.v = velV(index1:index2);
-        vel.ts = velTS(index1:index2);
+        vel.v = curVel(index1:index2);
+        vel.ts = posTS(index1:index2);
+        epochXRed = curXRed(index1:index2);
+        epochYRed = curYRed(index1:index2);
+        epochXGreen = curXGreen(index1:index2);
+        epochYGreen = curYGreen(index1:index2);
         %If position tracking noise reduction is turned on, it should go
         %here.
 
@@ -405,30 +545,37 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
         eegTS = eeg.(char(epochNames(epochIdx))).ts;
         
 %         interpPosTS = interp1([eeg.ts(1) posTS eeg.ts(end)], [eeg.ts(1) posTS eeg.ts(end)], eeg.ts, 'spline');
-        interp = interp1([eegTS(1) vel.ts eegTS(end)], [eegTS(1) vel.ts eegTS(end)], eegTS, 'spline');
-        vel.v = interp1(velTS, velV, interp, 'spline');
-        vel.ts = interp;
-
-        xposR = interp1(epochPosTS, xposR, eegTS, 'spline');
-        yposR = interp1(epochPosTS, yposR, eegTS, 'spline');
+%         interp = interp1([eegTS(1) vel.ts eegTS(end)], [eegTS(1) vel.ts eegTS(end)], eegTS, 'spline');
+        vel.v = interp1(vel.ts, vel.v, eegTS, 'pchip');
+        vel.ts = eegTS;
         
-        xposG = interp1(epochPosTS, xposG, eegTS, 'spline');
-        yposG = interp1(epochPosTS, yposG, eegTS, 'spline');
+        epochXRed = interp1(epochPosTS, epochXRed, eegTS, 'pchip');
+        epochYRed = interp1(epochPosTS, epochYRed, eegTS, 'pchip');
+        epochXGreen = interp1(epochPosTS, epochXGreen, eegTS, 'pchip');
+        epochYGreen = interp1(epochPosTS, epochYGreen, eegTS, 'pchip');
+        
+%         xposR = interp1(epochPosTS, xposR, eegTS, 'spline');
+%         yposR = interp1(epochPosTS, yposR, eegTS, 'spline');
+%         
+%         xposG = interp1(epochPosTS, xposG, eegTS, 'spline');
+%         yposG = interp1(epochPosTS, yposG, eegTS, 'spline');
 
-        eeg.(char(epochNames(epochIdx))).redPos = [xposR; yposR];
-        eeg.(char(epochNames(epochIdx))).greenPos = [xposG; yposG];
-        eeg.(char(epochNames(epochIdx))).vel = [vel.v; vel.ts];
+        eeg.(char(epochNames(epochIdx))).redPos = [epochXRed; epochYRed];
+        eeg.(char(epochNames(epochIdx))).greenPos = [epochXGreen; epochYGreen];
+        eeg.(char(epochNames(epochIdx))).vel = vel.v;
+        eeg.(char(epochNames(epochIdx))).velTS = vel.ts;
         
         eeg.(char(epochNames(epochIdx))).raw.redPos = [posMat(3, index1:index2); posMat(4, index1:index2)];
         eeg.(char(epochNames(epochIdx))).raw.greenPos = [posMat(6, index1:index2); posMat(7, index1:index2)];
         eeg.(char(epochNames(epochIdx))).raw.posTS = epochPosTS;
-        eeg.(char(epochNames(epochIdx))).raw.velV = velV(index1:index2);
-        eeg.(char(epochNames(epochIdx))).raw.velTS = velTS(index1:index2);
+        eeg.(char(epochNames(epochIdx))).raw.cmPERpix = cmPERpix;
 
     end
     
     eeg.raw.redPos = [posMat(3, :); posMat(4, :)];
     eeg.raw.greenPos = [posMat(6, :); posMat(7, :)];
-    eeg.raw.velV = velV;
-    eeg.raw.velTS = velTS;
+    eeg.raw.cmPERpix = cmPERpix;
+    eeg.raw.posTS = posTS;
+%     eeg.raw.velV = velV;
+%     eeg.raw.velTS = velTS;
 end

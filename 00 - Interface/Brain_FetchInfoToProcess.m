@@ -163,13 +163,20 @@ function Brain_FetchInfoToProcess(inDirMetaNPos, inDirEEG, outDir, ratInfo, bloc
 
                     userPrompt = '\nWould you like to sort this waveform for spikes?\n';
                     validatedAnsr = char(Brain_validateString(userPrompt, {'Yes', 'No'}));
-
                     fprintf(notes, ['\t\tSpike_Sort: ', validatedAnsr, '\n']);
+                    if strcmp(validatedAnsr, 'No')
+                        userPrompt = '\n\tWould you still like to save a .dat file for future spike sorting?\n';
+                        validatedAnsr = char(Brain_validateString(userPrompt, {'Yes', 'No'}));
+                        fprintf(notes, ['\t\tSave_Dat: ', validatedAnsr, '\n']);
+                    else
+                        fprintf(notes, '\t\tSave_Dat: Yes\n');
+                    end
+                        
 %                         fprintf(notes, '\t\tSpike_Sorted: No\n');
 
                     %I think this always needs to be validated
 %                         if strcmp(validatedAnsr, 'Yes')
-                    validatedProbe = validatestring(ratInfo.wave(xx).Probe, {'Cam_eSeries64', 'Cam_fSeries64', 'NN_32Linear'});
+                    validatedProbe = validatestring(ratInfo.wave(xx).Probe, {'Cam_eSeries64', 'Cam_fSeries64', 'NN_32Linear', 'Cam_L3Series64', 'Cam_H2Series64'});
                     validatedMap = validatestring(ratInfo.wave(xx).Map, {'Linear', 'UShaped', 'View'});
 
                     fprintf(notes, ['\t\t\tProbe: ', validatedProbe, '\n']);

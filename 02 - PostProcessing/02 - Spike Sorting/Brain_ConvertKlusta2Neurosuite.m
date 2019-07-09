@@ -1,4 +1,4 @@
-function ConvertKlusta2Neurosuite(basepath,basename)
+function Brain_ConvertKlusta2Neurosuite(basepath,basename)
 % Converts .kwik/kwx files from Klusta into klusters-compatible
 % fet,res,clu,spk files.  Works on a single shank of a recording, assumes a
 % 16bit .dat and an .xml file is present in "basepath" (home folder) and
@@ -68,18 +68,21 @@ function ConvertKlusta2Neurosuite(basepath,basename)
     %% spike extraction from dat
     dat=memmapfile(char(datpath),'Format','int16'); %Map the data file
     tsampsperwave = (sbefore+safter); %(16 + 16) = 32
-    ngroupchans = length(channellist);%(11) = 11
-    valsperwave = tsampsperwave * ngroupchans;%(32*11) = 352
-    wvforms_all=zeros(length(spktimes)*tsampsperwave*ngroupchans,1,'int16'); %Vector with 248662spikes*32timepoints*11channels
-    wvranges = zeros(length(spktimes),ngroupchans); %Array with 11 channels x 248662 spikes
+%     ngroupchans = length(channellist);%(11) = 11
+%     valsperwave = tsampsperwave * ngroupchans;%(32*11) = 352
+%     wvforms_all=zeros(length(spktimes)*tsampsperwave*ngroupchans,1,'int16'); %Vector with 248662spikes*32timepoints*11channels
+%     wvranges = zeros(length(spktimes),ngroupchans); %Array with 11 channels x 248662 spikes
+    valsperwave = tsampsperwave * totalch;%(32*11) = 352
+    wvforms_all=zeros(length(spktimes)*tsampsperwave*totalch,1,'int16'); %Vector with 248662spikes*32timepoints*11channels
+    wvranges = zeros(length(spktimes),totalch); %Array with 11 channels x 248662 spikes
     wvpowers = zeros(1,length(spktimes)); %Vector with 248662spikes
     for j=1:length(spktimes) %For every spike
         try
             w = dat.data((uint64(spktimes(j))-sbefore).*totalch+1:(uint64(spktimes(j))+safter).*totalch);
-            %w = dat.data(4:9);
+            %w = dat.data((double(spktimes(j))-16).*11+1:(double(spktimes(j))+16).*11);
             wvforms=reshape(w,totalch,[]); %Reshapae w into an array with 11 rows
             %select needed channels
-            wvforms = wvforms(channellist,:);
+%             wvforms = wvforms(channellist,:);
             %         % detrend
             %         wvforms = floor(detrend(double(wvforms)));
             % median subtract
@@ -92,11 +95,13 @@ function ConvertKlusta2Neurosuite(basepath,basename)
         end
     
         %some processing for fet file
-        wvaswv = reshape(wvforms,tsampsperwave,ngroupchans);
+%         wvaswv = reshape(wvforms,tsampsperwave,ngroupchans);
+        wvaswv = reshape(wvforms,tsampsperwave,totalch);
         wvranges(j,:) = range(wvaswv);
         wvpowers(j) = sum(sum(wvaswv.^2));
     
-        lastpoint = tsampsperwave*ngroupchans*(j-1);
+%         lastpoint = tsampsperwave*ngroupchans*(j-1);
+        lastpoint = tsampsperwave*totalch*(j-1);
         wvforms_all(lastpoint+1 : lastpoint+valsperwave) = wvforms;
         %     wvforms_all(j,:,:)=int16(floor(detrend(double(wvforms)')));
         if rem(j,50000) == 0
@@ -112,6 +117,8 @@ function ConvertKlusta2Neurosuite(basepath,basename)
     %mean activity per spike
     fetmeans = mean(fets,1);
     %find first pcs, make means of those...
+    %NMD 10/21/18 This needs to change to a dynamic variable. Shouldn't be
+    %hard-coded
     featuresperspike = 3;
     firstpcslist = 1:featuresperspike:size(fets,1);
     firstpcmeans = mean(fets(firstpcslist,:),1);
@@ -147,7 +154,7 @@ function ConvertKlusta2Neurosuite(basepath,basename)
 
 
     %fet
-    SaveFetIn(char(fetname),fets);
+    Brain_SaveFetIn(char(fetname),fets);
     % dlmwrite(fetname,nfets)
     % dlmwrite(fetname,fets,'-append')
     % % fid=fopen(fetname,'w');

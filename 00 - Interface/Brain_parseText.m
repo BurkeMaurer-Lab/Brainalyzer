@@ -200,6 +200,8 @@ function voi_out = parseBRAIN(inDir, voi)
                         voi_out.wave(waveNum).Process = delim_colon{2};
                     elseif strcmp(delim_colon{1}, 'Spike_Sort')
                         voi_out.wave(waveNum).Sort = delim_colon{2};
+                    elseif strcmp(delim_colon{1}, 'Save_Dat')
+                        voi_out.wave(waveNum).SaveDat = delim_colon{2};
                     elseif strcmp(delim_colon{1}, 'Probe')
                         voi_out.wave(waveNum).Probe = delim_colon{2};
                     elseif strcmp(delim_colon{1}, 'Map')

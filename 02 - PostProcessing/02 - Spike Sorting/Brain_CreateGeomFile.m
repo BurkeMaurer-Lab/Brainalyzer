@@ -43,10 +43,10 @@ function numGood = Brain_CreateGeomFile(outDir, badChannels, prbType, mapType, s
     fprintf(prbFile, '\t0:\n\t\t{\n');
     fprintf(prbFile, '\t\t\t# List of channels to keep for spike detection.\n');
     fprintf(prbFile, '\t\t\t''channels'': [');
-    for l=1:length(currShank.Site)-1
-        if ismember(currShank.Site(l).ID, badIDs)==0 %If the channel is a good channel
+    for siteIdx=1:length(currShank.Site)
+        if ismember(currShank.Site(siteIdx).ID, badIDs)==0 %If the channel is a good channel
             if geomChanStart; fprintf(prbFile, ', '); end
-            fprintf(prbFile, '%d', currShank.Site(l).ID);
+            fprintf(prbFile, '%d', currShank.Site(siteIdx).ID);
             if ~geomChanStart; geomChanStart = 1; end
         end
     end
