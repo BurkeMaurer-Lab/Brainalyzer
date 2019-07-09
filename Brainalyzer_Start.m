@@ -4,7 +4,7 @@ close all;
 
 %----------------------------------------------------------%
 %----------------------------------------------------------%
-%                          STEP 0                          %
+%                          STEP 0                          %    
 %                                                          %
 %  Here we want to read and save the step, directory, and  %
 % variables of interest from the user or other method for  %
