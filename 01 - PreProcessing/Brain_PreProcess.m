@@ -511,6 +511,7 @@ function eeg = Brain_LoadPosition(inDir, eeg, totalTime, timeVector)
         prevSumBad = sum(accBoolStrong);
     end
     
+    
     %Iterate through the epochs
     for epochIdx = 1:numEpochs
         
